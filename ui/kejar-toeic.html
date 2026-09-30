@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kejar TOEIC / AutoFill</title>
+    <link rel="stylesheet" href="/ui/style.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="side-rail">
+            <div class="brand-mark"><span>J</span><small>T</small></div>
+            <div class="rail-copy">
+                <p class="eyebrow">Kejar · TOEIC</p>
+                <h1>Toeic<br><em>Fill.</em></h1>
+                <p class="rail-note">Pilih kategori, generate script, tempel ke Console Kejar.</p>
+            </div>
+            <div class="rail-footer"><span class="status-dot"></span><span>Kejar workspace</span></div>
+        </aside>
+        <main class="workspace">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Workspace / Kejar</p>
+                    <h2>Kejar TOEIC.</h2>
+                </div>
+                <div class="topbar-badge"><span class="pulse"></span>Auto-solve ready</div>
+            </header>
+            <nav class="mode-tabs" aria-label="Pilih engine jurnal">
+                <a class="mode-tab" href="/">API Range Harian</a>
+                <a class="mode-tab" href="/ui/weekly.html">Jurnal Mingguan</a>
+                <span class="mode-tab active">Kejar TOEIC</span>
+            </nav>
+
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">01 / Kategori</p>
+                    <h2>Pilih latihan.</h2>
+                </div>
+                <span class="heading-rule"></span>
+            </div>
+
+            <div class="kejar-grid">
+                <button class="kejar-card" onclick="openKejarToeic('words')">
+                    <div class="kejar-card-index">A</div>
+                    <div class="kejar-card-body">
+                        <h3>TOEIC Words</h3>
+                        <p>Vocabulary practice</p>
+                    </div>
+                    <span class="kejar-card-arrow">→</span>
+                </button>
+
+                <button class="kejar-card" onclick="openKejarToeic('reading')">
+                    <div class="kejar-card-index">B</div>
+                    <div class="kejar-card-body">
+                        <h3>TOEIC Reading Preparations</h3>
+                        <p>Reading practice</p>
+                    </div>
+                    <span class="kejar-card-arrow">→</span>
+                </button>
+            </div>
+
+            <footer class="workspace-footer">
+                <a href="/">← API Range Harian</a>
+                <span>Kejar TOEIC</span>
+            </footer>
+        </main>
+    </div>
+    <script src="/src/kejar-toeic-config.js"></script>
+    <script src="/src/kejar-toeic-injector.js"></script>
+    <script src="/ui/kejar-toeic-app.js"></script>
+</body>
+</html>
