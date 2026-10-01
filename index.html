@@ -3,177 +3,214 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#050507">
-    <meta name="description" content="Fillio turns daily and weekly journal routines into clear, ready-to-run scripts.">
-    <title>Fillio — Make room for what matters</title>
+    <meta name="theme-color" content="#070304">
+    <meta name="description" content="Fillio — journal routines and learning practice, gathered in one place.">
+    <title>Fillio — The Broken Rules</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="src/experience.css">
 </head>
 <body class="experience-page">
     <div class="reading-progress" aria-hidden="true"><span id="reading-progress-bar"></span></div>
+    <div id="bg-cosmic" aria-hidden="true"></div>
+    <div id="bg-nebula" aria-hidden="true"></div>
+    <canvas class="world-canvas" id="world-canvas" aria-hidden="true"></canvas>
     <canvas class="ambient-canvas" id="ambient-canvas" aria-hidden="true"></canvas>
-    <div class="grain-layer" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+    <div class="scanlines" aria-hidden="true"></div>
+    <div id="mouse-light" aria-hidden="true"></div>
 
     <header class="experience-header" id="site-header">
         <a class="brand-lockup" href="#home" aria-label="Fillio home">
-            <span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>
-            <span class="brand-name">fillio<span class="brand-period">.</span></span>
+            <span class="brand-sigil" aria-hidden="true">F</span>
+            <span class="brand-name">FILLIO<span>.</span></span>
         </a>
-        <nav class="desktop-nav" aria-label="Main navigation">
-            <a class="nav-link is-current" href="#home">Overview</a>
-            <a class="nav-link" href="#daily">Daily journal</a>
-            <a class="nav-link" href="#tools">Other tools</a>
+        <nav class="desktop-nav" aria-label="Navigasi utama">
+            <a class="nav-link is-current" href="#home">Awal</a>
+            <a class="nav-link" href="#daily">Jurnal harian</a>
+            <a class="nav-link" href="#weekly">Mingguan</a>
+            <a class="nav-link" href="#kejar">Kejar</a>
         </nav>
-        <a class="header-action magnetic-link" href="#daily">Open workspace <span aria-hidden="true">↘</span></a>
-        <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="mobile-navigation">
+        <a class="header-action magnetic-link" href="#daily">Buka jurnal <span aria-hidden="true">↘</span></a>
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Buka navigasi" aria-expanded="false" aria-controls="mobile-navigation">
             <span></span><span></span>
         </button>
     </header>
-    <nav class="mobile-nav" id="mobile-navigation" aria-label="Mobile navigation" inert>
-        <a href="#home"><span>01</span>Overview</a>
-        <a href="#daily"><span>02</span>Daily journal</a>
-        <a href="#tools"><span>03</span>Other tools</a>
-        <small>JOURNAL AUTOMATION / 2026</small>
+    <nav class="mobile-nav" id="mobile-navigation" aria-label="Navigasi mobile" inert>
+        <a href="#home"><span>01</span>Awal</a>
+        <a href="#daily"><span>02</span>Jurnal harian</a>
+        <a href="#weekly"><span>03</span>Jurnal mingguan</a>
+        <a href="#kejar"><span>04</span>Kejar practice</a>
+        <small>FILLIO / PERSONAL RECORD SYSTEM</small>
     </nav>
 
     <main>
         <section class="hero-section" id="home" aria-labelledby="hero-title">
             <div class="hero-grid" aria-hidden="true"></div>
-            <div class="hero-copy">
-                <p class="eyebrow reveal-up"><span class="status-indicator"></span> A considered way to keep your journal</p>
-                <h1 class="hero-title" id="hero-title"><span class="title-line"><span>Make room</span></span><span class="title-line title-line-offset"><span>for what</span></span><span class="title-line"><span class="title-accent">matters.</span></span></h1>
-                <div class="hero-foot reveal-up">
-                    <p>Turn the small, recurring work of keeping a journal into a calmer, more deliberate ritual.</p>
-                    <a class="round-link magnetic-link" href="#daily" aria-label="Go to daily journal"><span>↓</span></a>
+            <div class="world-atmosphere" aria-hidden="true">
+                <div class="world-bloom"></div>
+                <div class="world-rift"></div>
+                <div class="world-horizon"></div>
+                <div class="world-spire spire-left"></div>
+                <div class="world-spire spire-right"></div>
+                <div class="world-shard shard-one"></div>
+                <div class="world-shard shard-two"></div>
+                <div class="world-shard shard-three"></div>
+                <div class="world-ground"></div>
+            </div>
+            <svg class="crimson-tree" viewBox="0 0 900 900" fill="none" aria-hidden="true">
+                <defs>
+                    <radialGradient id="tree-core"><stop stop-color="#ffd7ce"/><stop offset=".16" stop-color="#ff3455"/><stop offset="1" stop-color="#9b071d" stop-opacity="0"/></radialGradient>
+                    <linearGradient id="tree-stroke" x1="450" y1="160" x2="450" y2="850" gradientUnits="userSpaceOnUse"><stop stop-color="#ff6678"/><stop offset=".46" stop-color="#c70d2b"/><stop offset="1" stop-color="#520511" stop-opacity=".05"/></linearGradient>
+                </defs>
+                <circle class="tree-ring" cx="450" cy="198" r="68"/><circle class="tree-ring" cx="450" cy="198" r="116"/><circle class="tree-ring" cx="450" cy="198" r="172"/><circle class="tree-ring" cx="450" cy="198" r="236"/><circle class="tree-ring" cx="450" cy="198" r="307"/>
+                <circle cx="450" cy="198" r="68" fill="url(#tree-core)"/>
+                <g class="tree-branches" stroke="url(#tree-stroke)" stroke-linecap="round">
+                    <path d="M450 196C446 300 458 398 438 505C427 610 445 700 406 876" stroke-width="4"/><path d="M450 196C457 302 442 405 468 508C486 612 463 721 506 875" stroke-width="3"/>
+                    <path d="M449 274C392 260 330 220 275 196C227 175 179 168 128 141"/><path d="M447 355C384 341 329 315 268 290C212 267 174 268 119 237"/>
+                    <path d="M441 444C370 427 313 413 253 385C206 363 165 365 107 337"/><path d="M435 535C373 528 319 503 258 486C196 468 164 480 99 452"/>
+                    <path d="M432 626C367 624 306 606 246 591C191 577 151 592 89 571"/><path d="M424 720C365 726 307 704 243 701C179 698 143 724 75 714"/>
+                    <path d="M451 274C508 260 570 220 625 196C673 175 721 168 772 141"/><path d="M453 355C516 341 571 315 632 290C688 267 726 268 781 237"/>
+                    <path d="M459 444C530 427 587 413 647 385C694 363 735 365 793 337"/><path d="M465 535C527 528 581 503 642 486C704 468 736 480 801 452"/>
+                    <path d="M468 626C533 624 594 606 654 591C709 577 749 592 811 571"/><path d="M476 720C535 726 593 704 657 701C721 698 757 724 825 714"/>
+                    <path d="M275 196C263 158 243 124 217 93M625 196C637 158 657 124 683 93M268 290C241 262 219 228 202 193M632 290C659 262 681 228 698 193"/>
+                    <path d="M253 385C222 351 199 318 180 278M647 385C678 351 701 318 720 278M258 486C228 452 201 421 168 394M642 486C672 452 699 421 732 394"/>
+                    <path d="M406 822C355 843 304 862 253 899M506 822C557 843 608 862 659 899M438 818C411 845 393 870 377 900M468 818C489 846 512 872 533 900"/>
+                </g>
+            </svg>
+            <div class="hero-content">
+                <p class="hero-subtitle reveal-up"><span class="status-indicator"></span> Broken system / record still active</p>
+                <h1 class="hero-title" id="hero-title"><span>The Broken</span><br><span class="title-highlight">Rules</span></h1>
+                <p class="hero-desc reveal-up">The tower writes the rules. Jaehwan walks beyond them. Keep your own record across daily rituals, weekly practice, and every step forward.</p>
+                <div class="hero-btns reveal-up">
+                    <a href="#daily" class="btn btn-primary magnetic-link">Enter the journal <span aria-hidden="true">↘</span></a>
+                    <a href="#weekly" class="btn btn-secondary">Read the chronicle</a>
+                </div>
+                <div class="world-contact reveal-up" id="world-contact">
+                    <div class="world-contact-signal" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+                    <div class="world-contact-copy">
+                        <span class="field-label">TRANSMISSION / AGE UNKNOWN</span>
+                        <p id="world-message" aria-live="polite">A billion years passed. The tower is still counting.</p>
+                    </div>
+                    <button class="world-contact-button" id="world-attune" type="button"><span>Answer the signal</span><span aria-hidden="true">↗</span></button>
                 </div>
             </div>
-            <div class="hero-instrument" aria-label="Abstract visualization of a journal rhythm">
-                <div class="instrument-orbit orbit-outer"></div><div class="instrument-orbit orbit-middle"></div><div class="instrument-orbit orbit-inner"></div>
-                <div class="instrument-axis axis-horizontal"></div><div class="instrument-axis axis-vertical"></div>
-                <div class="instrument-core"><span></span></div>
-                <div class="instrument-node node-one"></div><div class="instrument-node node-two"></div><div class="instrument-node node-three"></div>
-                <div class="instrument-readout readout-top"><span>RHYTHM / 01</span><strong>Daily</strong></div>
-                <div class="instrument-readout readout-bottom"><span>INTENTION</span><strong>Make it count</strong></div>
-                <span class="instrument-coordinate">06° 14' / 106° 48'</span>
-            </div>
-            <div class="hero-index" aria-hidden="true"><span>F / 01</span><span>JOURNAL SYSTEM</span></div>
+            <div class="hero-coordinate"><span>F / 01</span><span>THE RULES WERE MADE TO BREAK</span></div>
+            <a href="#daily" class="scroll-indicator" aria-label="Scroll to daily journal"><span>Descend</span><i></i></a>
         </section>
 
         <section class="intro-band reveal-up" aria-label="Fillio overview">
-            <p class="intro-label">Less repetition.<br>More presence.</p>
-            <p class="intro-copy">Fillio prepares your journal entries from routines you already know. Set a date range, shape the details, and generate a script when everything feels right.</p>
-            <div class="intro-mark" aria-hidden="true"><span>F</span><i></i><span>01</span></div>
+            <p class="intro-label">Three rhythms.<br><em>One place to begin.</em></p>
+            <p class="intro-copy">Set the dates. Shape the details. Generate a script when it feels right. Fillio keeps each routine in your hands until you choose to run it.</p>
+            <div class="intro-index"><span>01</span><i></i><span>DAILY</span><i></i><span>WEEKLY</span><i></i><span>PRACTICE</span></div>
         </section>
 
-        <section class="archive-panel" id="daily" aria-labelledby="daily-title">
-            <div class="archive-intro reveal-up">
-                <p class="eyebrow">01 / DAILY JOURNAL</p>
-                <h2 id="daily-title">A little structure.<br><em>A lighter day.</em></h2>
-                <p>Choose a period and tune the details to your real routine. Nothing is submitted until you run the generated script yourself.</p>
+        <section class="workflow-section" id="daily" aria-labelledby="daily-title">
+            <div class="section-heading reveal-up">
+                <p class="section-tag">01 / Daily record</p>
+                <h2 class="section-title" id="daily-title">One day at a time.</h2>
+                <p class="section-deck">Pick a range, tune your routine, and create a script for the journal page.</p>
+                <div class="section-line"></div>
             </div>
 
-            <nav class="mode-tabs" aria-label="Journal tools">
-                <span class="mode-tab active" aria-current="page">Daily journal</span>
-                <a class="mode-tab" href="ui/weekly.html">Weekly journal</a>
-                <a class="mode-tab" href="ui/kejar-toeic.html">Kejar practice</a>
-            </nav>
-
-            <section class="date-panel reveal-up" aria-labelledby="date-heading">
-                <div class="section-kicker"><span>01</span><span>DATE RANGE</span></div>
-                <div class="date-panel-main">
-                    <div>
-                        <h3 id="date-heading">Choose your window</h3>
-                        <p class="section-subtitle">Pick the days this journal should cover.</p>
-                    </div>
-                    <div class="date-row">
-                        <div class="input-group"><label for="start-date">From</label><input type="date" id="start-date"></div>
-                        <span class="date-arrow" aria-hidden="true">—</span>
-                        <div class="input-group"><label for="end-date">Through</label><input type="date" id="end-date"></div>
-                    </div>
+            <div class="date-panel reveal-up" aria-labelledby="date-heading">
+                <div class="date-panel-intro"><span class="field-label">DATE RANGE / 01</span><h3 id="date-heading">Choose your window</h3><p>Pick the days this journal should cover.</p></div>
+                <div class="date-row">
+                    <div class="input-group"><label for="start-date">From</label><input type="date" id="start-date"></div>
+                    <span class="date-arrow" aria-hidden="true">—</span>
+                    <div class="input-group"><label for="end-date">Through</label><input type="date" id="end-date"></div>
                 </div>
                 <div id="date-info" class="date-info" aria-live="polite"><span>Select a date range to begin.</span></div>
-            </section>
-
-            <div class="section-heading reveal-up">
-                <div class="section-index"><span>02</span><i></i><span>DAILY PRACTICE</span></div>
-                <div class="section-title-block">
-                    <h2>Make it your own.</h2>
-                    <p>Change any value to match the day you actually had.</p>
-                </div>
             </div>
 
+            <div class="activity-heading reveal-up"><div><span class="field-label">ROUTINE / 02</span><h3>Make it your own.</h3></div><p>Change any value to match the day you actually had.</p></div>
             <div class="activity-grid">
                 <section class="panel panel-wide reveal-up"><div class="panel-heading"><span class="panel-index">A</span><div><h3>Salat wajib</h3><p>Rutinitas utama setiap hari</p></div></div><div id="salat-wajib-container"></div></section>
-                <section class="panel panel-accent reveal-up"><div class="panel-heading"><span class="panel-index">B</span><div><h3>Salat sunnah</h3><p>Tambahkan kebiasaan baik</p></div></div><div id="salat-sunnah-container"></div></section>
-                <section class="panel panel-accent-soft reveal-up"><div class="panel-heading"><span class="panel-index">C</span><div><h3>Zikir</h3><p>Jaga jeda dalam harimu</p></div></div><div id="zikir-container"></div></section>
+                <section class="panel reveal-up"><div class="panel-heading"><span class="panel-index">B</span><div><h3>Salat sunnah</h3><p>Tambahkan kebiasaan baik</p></div></div><div id="salat-sunnah-container"></div></section>
+                <section class="panel reveal-up"><div class="panel-heading"><span class="panel-index">C</span><div><h3>Zikir</h3><p>Jaga jeda dalam harimu</p></div></div><div id="zikir-container"></div></section>
                 <section class="panel panel-wide reveal-up"><div class="panel-heading"><span class="panel-index">D</span><div><h3>Pembiasaan harian</h3><p>Hal kecil yang membentuk ritme</p></div></div><div id="daily-container"></div></section>
-                <section class="panel panel-sleep reveal-up"><div class="panel-heading"><span class="panel-index">E</span><div><h3>Tidur & bangun</h3><p>Mulai dan tutup hari dengan baik</p></div></div><div id="tidur-bangun-container"></div></section>
+                <section class="panel reveal-up"><div class="panel-heading"><span class="panel-index">E</span><div><h3>Tidur & bangun</h3><p>Mulai dan tutup hari dengan baik</p></div></div><div id="tidur-bangun-container"></div></section>
             </div>
 
             <section class="action-panel reveal-up" aria-labelledby="output-title">
-                <div class="action-copy">
-                    <span class="field-label">03 — YOUR SCRIPT</span>
-                    <h2 id="output-title">Ready when<br>you are.</h2>
-                    <p>Review the plan, then generate a script to run in the journal page’s browser console.</p>
-                </div>
+                <div class="action-copy"><span class="field-label">OUTPUT / 03</span><h3 id="output-title">Ready when<br>you are.</h3><p>Review the plan, then generate a script to run in the journal page’s browser console.</p></div>
                 <div class="action-controls">
                     <div id="preview-box" class="preview-box" aria-live="polite"></div>
-                    <div id="error-box" class="error-box" style="display: none;" role="alert"></div>
-                    <div class="btn-group">
-                        <button id="generate-btn" class="btn btn-primary magnetic-button" type="button"><span>Generate script</span><span aria-hidden="true">↗</span></button>
-                        <button id="reset-btn" class="btn btn-outline" type="button">Reset</button>
-                    </div>
+                    <div id="error-box" class="error-box" style="display:none" role="alert"></div>
+                    <div class="btn-group"><button id="generate-btn" class="btn btn-primary magnetic-button" type="button"><span>Generate script</span><span aria-hidden="true">↗</span></button><button id="reset-btn" class="btn btn-outline" type="button">Reset</button></div>
                 </div>
-                <div id="output-area" class="output-area" style="display: none;">
+                <div id="output-area" class="output-area" style="display:none">
                     <div class="output-header"><span>Script ready to run in browser console</span><button id="copy-btn" class="btn btn-sm" type="button">Copy script</button></div>
-                    <textarea id="output-script" readonly aria-label="Generated journal script"></textarea>
+                    <textarea id="output-script" readonly aria-label="Generated daily journal script"></textarea>
                 </div>
-            </section>
-
-            <section id="weekly-panel" class="weekly-panel" hidden>
-                <div class="section-kicker"><span>W</span><span>Weekly engine</span></div>
-                <div class="weekly-heading"><div><h2>Jurnal mingguan</h2><p>Atur kebiasaan mingguan terpisah dari API range harian.</p></div><span class="weekly-badge">POST / deed-habbit</span></div>
-                <div class="weekly-controls">
-                    <label>Mode<select id="weekly-mode"><option value="DRY_RUN">DRY_RUN</option><option value="RUN">RUN</option></select></label>
-                    <label>Offset minggu<input id="weekly-offset" type="number" value="0" step="1"></label>
-                    <label class="weekly-check"><input id="weekly-overwrite" type="checkbox"><span>Timpa deed yang sudah ada</span></label>
-                </div>
-                <div class="weekly-list-heading"><span>Kegiatan</span><span>Pelaksanaan</span><span>Hari</span><span>Saksi</span><span>Nama saksi</span></div>
-                <div id="weekly-plan-list" class="weekly-plan-list"></div>
-                <div id="weekly-error" class="error-box" hidden></div>
-                <div class="weekly-actions"><button id="weekly-generate" class="btn btn-primary" type="button">Generate weekly script <span>↗</span></button><button id="weekly-reset" class="btn btn-outline" type="button">Reset</button></div>
-                <div id="weekly-output-area" class="weekly-output" hidden><div class="output-header"><span>Weekly script ready to run in browser console</span><button id="weekly-copy" class="btn btn-sm" type="button">Copy script</button></div><textarea id="weekly-output" readonly aria-label="Generated weekly script"></textarea></div>
             </section>
         </section>
 
-        <section class="tools-section" id="tools" aria-labelledby="tools-title">
-            <div class="tools-heading reveal-up">
-                <div class="section-index"><span>02</span><i></i><span>MORE IN YOUR FLOW</span></div>
-                <h2 id="tools-title">Different rhythms.<br><em>One quieter system.</em></h2>
+        <section class="workflow-section weekly-section" id="weekly" aria-labelledby="weekly-title">
+            <div class="section-heading reveal-up">
+                <p class="section-tag">02 / Weekly rhythm</p>
+                <h2 class="section-title" id="weekly-title">A wider view.</h2>
+                <p class="section-deck">Plan habits by MEB week. Choose categories, days, and witnesses before generating the API script.</p>
+                <div class="section-line"></div>
             </div>
-            <div class="tool-list">
-                <a class="tool-row reveal-up" href="ui/weekly.html"><span class="tool-number">02 / 01</span><span class="tool-name">Weekly journal</span><span class="tool-description">Plan habits across your MEB weeks.</span><span class="tool-arrow" aria-hidden="true">↗</span></a>
-                <a class="tool-row reveal-up" href="ui/kejar-toeic.html"><span class="tool-number">02 / 02</span><span class="tool-name">Kejar practice</span><span class="tool-description">Open TOEIC and Matrikulasi practice tools.</span><span class="tool-arrow" aria-hidden="true">↗</span></a>
+            <section class="weekly-panel reveal-up" aria-label="Weekly journal planner">
+                <div class="weekly-topline"><span class="field-label">WEEKLY API ENGINE</span><span class="weekly-badge">POST / deed-habbit</span></div>
+                <div class="weekly-heading"><div><h3>Set your MEB range.</h3><p>Choose one week or a longer stretch of your routine.</p></div></div>
+                <div class="weekly-controls">
+                    <label>Mode<select id="weekly-mode"><option value="DRY_RUN">DRY_RUN</option><option value="RUN">RUN</option></select></label>
+                    <label>From MEB<select id="weekly-meb-from"></select></label>
+                    <label>Through MEB<select id="weekly-meb-to"></select></label>
+                    <label class="weekly-check"><input id="weekly-overwrite" type="checkbox"><span>Overwrite existing entries</span></label>
+                    <label class="weekly-check"><input id="weekly-reload" type="checkbox" checked><span>Reload after RUN</span></label>
+                </div>
+                <div id="weekly-range-info" class="weekly-range-info" aria-live="polite"></div>
+                <div class="weekly-list-heading"><span>Activity</span><span>Category</span><span>Day</span><span>Witness</span><span>Witness name</span></div>
+                <div id="weekly-plan-list" class="weekly-plan-list"></div>
+                <div id="weekly-error" class="error-box" hidden role="alert"></div>
+                <div class="weekly-actions"><button id="weekly-generate" class="btn btn-primary magnetic-button" type="button">Generate API script <span>↗</span></button><button id="weekly-reset" class="btn btn-outline" type="button">Reset</button><button id="weekly-copy" class="btn btn-outline" type="button" hidden>Copy script</button></div>
+                <div id="weekly-output-area" class="weekly-output" hidden><div class="output-header"><span>Weekly API script ready for your browser console</span></div><textarea id="weekly-output" readonly aria-label="Generated weekly journal script"></textarea></div>
+            </section>
+        </section>
+
+        <section class="workflow-section kejar-section" id="kejar" aria-labelledby="kejar-title">
+            <div class="section-heading reveal-up">
+                <p class="section-tag">03 / Practice route</p>
+                <h2 class="section-title" id="kejar-title">Keep moving forward.</h2>
+                <p class="section-deck">Choose a Kejar exercise to prepare its script and open the matching practice page.</p>
+                <div class="section-line"></div>
+            </div>
+            <div class="kejar-group reveal-up">
+                <div class="kejar-group-heading"><span class="field-label">LANGUAGE / TOEIC</span><span>01—02</span></div>
+                <div id="kejar-toeic-grid" class="kejar-grid"></div>
+            </div>
+            <div class="kejar-group reveal-up">
+                <div class="kejar-group-heading"><span class="field-label">FOUNDATION / MATRIKULASI</span><span>03—06</span></div>
+                <div id="kejar-matrikulasi-grid" class="kejar-grid"></div>
             </div>
         </section>
 
         <section class="closing-section reveal-up" id="about">
             <div class="closing-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
-            <span class="field-label">FILLIO / JOURNAL AUTOMATION</span>
-            <p>Keep the ritual.<br><em>Lose the friction.</em></p>
-            <a href="#daily" class="closing-link">Return to your daily journal <span aria-hidden="true">↑</span></a>
+            <span class="field-label">FILLIO / PERSONAL RECORD SYSTEM</span>
+            <p>Keep the ritual.<br><em>Walk the next step.</em></p>
+            <a href="#home" class="closing-link">Return to the beginning <span aria-hidden="true">↑</span></a>
         </section>
     </main>
 
     <footer class="experience-footer">
-        <a class="brand-lockup" href="#home" aria-label="Fillio home"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span><span class="brand-name">fillio<span class="brand-period">.</span></span></a>
-        <span class="footer-note">A tool for the everyday, made with intention.</span>
+        <a class="brand-lockup" href="#home" aria-label="Fillio home"><span class="brand-sigil" aria-hidden="true">F</span><span class="brand-name">FILLIO<span>.</span></span></a>
+        <span class="footer-note">A quieter system for daily practice.</span>
         <a class="back-to-top" href="#home">BACK TO TOP <span aria-hidden="true">↑</span></a>
     </footer>
 
-    <script src="ui/app.js"></script>
+    <script src="ui/app.js?v=2"></script>
+    <script src="ui/weekly-app.js"></script>
+    <script src="src/kejar-toeic-config.js"></script>
+    <script src="src/kejar-toeic-injector.js"></script>
+    <script src="ui/kejar-toeic-app.js"></script>
+    <script src="src/world-engine.js"></script>
+    <script src="src/world-interaction.js"></script>
     <script src="src/experience.js"></script>
 </body>
 </html>

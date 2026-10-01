@@ -76,18 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resetBtn: document.getElementById('reset-btn'),
         outputArea: document.getElementById('output-area'),
         outputScript: document.getElementById('output-script'),
-        copyBtn: document.getElementById('copy-btn'),
-        weeklyPanel: document.getElementById('weekly-panel'),
-        weeklyMode: document.getElementById('weekly-mode'),
-        weeklyOffset: document.getElementById('weekly-offset'),
-        weeklyOverwrite: document.getElementById('weekly-overwrite'),
-        weeklyPlanList: document.getElementById('weekly-plan-list'),
-        weeklyError: document.getElementById('weekly-error'),
-        weeklyGenerate: document.getElementById('weekly-generate'),
-        weeklyReset: document.getElementById('weekly-reset'),
-        weeklyOutputArea: document.getElementById('weekly-output-area'),
-        weeklyOutput: document.getElementById('weekly-output'),
-        weeklyCopy: document.getElementById('weekly-copy')
+        copyBtn: document.getElementById('copy-btn')
     };
 
     // Validasi semua element ada
@@ -184,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function attachEvents() {
-        document.querySelectorAll('select').forEach(sel => {
+        document.querySelectorAll('.activity-grid select[data-group]').forEach(sel => {
             sel.onchange = (e) => {
                 const { group, key, field } = e.target.dataset;
                 const val = e.target.value;
@@ -405,16 +394,6 @@ document.addEventListener('DOMContentLoaded', () => {
         els.copyBtn.textContent = 'Tersalin!';
         setTimeout(() => els.copyBtn.textContent = 'Salin', 2000);
     });
-    document.querySelectorAll('.mode-tab').forEach(tab => tab.addEventListener('click', () => setMode(tab.dataset.mode)));
-    els.weeklyGenerate.addEventListener('click', generateWeeklyScript);
-    els.weeklyReset.addEventListener('click', resetWeekly);
-    els.weeklyCopy.addEventListener('click', () => {
-        els.weeklyOutput.select();
-        document.execCommand('copy');
-        els.weeklyCopy.textContent = 'Tersalin!';
-        setTimeout(() => els.weeklyCopy.textContent = 'Salin script', 2000);
-    });
-
     const worldScene = document.querySelector('.world-backdrop');
     if (worldScene && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         let pointerX = 0;
@@ -451,5 +430,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     refreshUI();
-    renderWeeklyPlan();
 });

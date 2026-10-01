@@ -6,6 +6,7 @@
   const menuToggle = document.getElementById('menu-toggle');
   const mobileNavigation = document.getElementById('mobile-navigation');
   const canvas = document.getElementById('ambient-canvas');
+  const mouseLight = document.getElementById('mouse-light');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const finePointer = window.matchMedia('(pointer: fine)');
   const navLinks = [...document.querySelectorAll('.desktop-nav .nav-link')];
@@ -18,6 +19,13 @@
   let canvasWidth = 0;
   let canvasHeight = 0;
   let pixelRatio = 1;
+
+  if (mouseLight && finePointer.matches && !reducedMotion.matches) {
+    window.addEventListener('pointermove', (event) => {
+      mouseLight.style.left = `${event.clientX}px`;
+      mouseLight.style.top = `${event.clientY}px`;
+    }, { passive: true });
+  }
 
   function closeMenu(restoreFocus = false) {
     if (!menuToggle || !mobileNavigation) return;
@@ -174,8 +182,8 @@
       canvasHeight * 0.35 + pointerOffsetY,
       Math.min(canvasWidth, canvasHeight) * 0.54
     );
-    glow.addColorStop(0, 'rgba(118, 94, 180, 0.075)');
-    glow.addColorStop(0.55, 'rgba(72, 59, 111, 0.025)');
+    glow.addColorStop(0, 'rgba(180, 20, 48, 0.085)');
+    glow.addColorStop(0.55, 'rgba(98, 8, 24, 0.03)');
     glow.addColorStop(1, 'rgba(5, 5, 7, 0)');
     canvasContext.fillStyle = glow;
     canvasContext.fillRect(0, 0, canvasWidth, canvasHeight);
@@ -190,7 +198,8 @@
       const y = particle.y + drift + pointerOffsetY * influence * 0.22;
       canvasContext.beginPath();
       canvasContext.arc(x, y, particle.radius, 0, Math.PI * 2);
-      canvasContext.fillStyle = `rgba(194, 182, 227, ${0.1 + influence * 0.2})`;
+      const color = particle.phase % 4 > 2 ? '220, 140, 101' : '224, 104, 123';
+      canvasContext.fillStyle = `rgba(${color}, ${0.11 + influence * 0.22})`;
       canvasContext.fill();
     });
     canvasFrame = window.requestAnimationFrame(drawAmbient);
