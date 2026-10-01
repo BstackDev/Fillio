@@ -5,8 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kejar TOEIC / AutoFill</title>
     <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="../src/experience.css">
 </head>
-<body>
+<body class="experience-page tool-page">
+    <div class="battlefield-scenery" aria-hidden="true">
+        <div class="scene-void"></div>
+        <div class="scene-rift"></div>
+        <div class="scene-rock scene-rock-a"></div>
+        <div class="scene-rock scene-rock-b"></div>
+        <div class="scene-rock scene-rock-c"></div>
+        <div class="scene-silhouette"></div>
+        <div class="scene-fog scene-fog-a"></div>
+        <div class="scene-fog scene-fog-b"></div>
+        <div class="scene-particles"></div>
+        <div class="scene-embers"></div>
+    </div>
     <div class="app-shell">
         <aside class="side-rail">
             <div class="brand-mark"><span>J</span><small>T</small></div>
@@ -31,16 +44,17 @@
                 <span class="mode-tab active">Kejar TOEIC</span>
             </nav>
 
+            <!-- ═══════════ SECTION 1: KEJAR TOEIC ═══════════ -->
             <div class="section-heading">
                 <div>
-                    <p class="eyebrow">01 / Kategori</p>
+                    <p class="eyebrow">01 / Kejar TOEIC</p>
                     <h2>Pilih latihan.</h2>
                 </div>
                 <span class="heading-rule"></span>
             </div>
 
             <div class="kejar-grid">
-                <button class="kejar-card" onclick="openKejarToeic('words')">
+                <button class="kejar-card" type="button" onclick="openKejarModal('toeicwords')">
                     <div class="kejar-card-index">A</div>
                     <div class="kejar-card-body">
                         <h3>TOEIC Words</h3>
@@ -49,7 +63,7 @@
                     <span class="kejar-card-arrow">→</span>
                 </button>
 
-                <button class="kejar-card" onclick="openKejarToeic('reading')">
+                <button class="kejar-card" type="button" onclick="openKejarModal('toeic_reading_preparation')">
                     <div class="kejar-card-index">B</div>
                     <div class="kejar-card-body">
                         <h3>TOEIC Reading Preparations</h3>
@@ -59,9 +73,56 @@
                 </button>
             </div>
 
+            <!-- ═══════════ SECTION 2: KEJAR MATRIKULASI ═══════════ -->
+            <div class="section-heading" style="margin-top:58px">
+                <div>
+                    <p class="eyebrow">02 / Kejar Matrikulasi</p>
+                    <h2>Pilih materi.</h2>
+                </div>
+                <span class="heading-rule"></span>
+            </div>
+
+            <div class="kejar-grid">
+                <button class="kejar-card" type="button" onclick="openKejarModal('obr')">
+                    <div class="kejar-card-index">A</div>
+                    <div class="kejar-card-body">
+                        <h3>Operasi Bilangan Riil</h3>
+                        <p>Numerical practice</p>
+                    </div>
+                    <span class="kejar-card-arrow">→</span>
+                </button>
+
+                <button class="kejar-card" type="button" onclick="openKejarModal('katabaku')">
+                    <div class="kejar-card-index">B</div>
+                    <div class="kejar-card-body">
+                        <h3>Kata Baku</h3>
+                        <p>Standard words practice</p>
+                    </div>
+                    <span class="kejar-card-arrow">→</span>
+                </button>
+
+                <button class="kejar-card" type="button" onclick="openKejarModal('vocabulary')">
+                    <div class="kejar-card-index">C</div>
+                    <div class="kejar-card-body">
+                        <h3>Vocabulary</h3>
+                        <p>English vocabulary</p>
+                    </div>
+                    <span class="kejar-card-arrow">→</span>
+                </button>
+
+                <button class="kejar-card" type="button" onclick="openKejarModal('menulisefektif')">
+                    <div class="kejar-card-index">D</div>
+                    <div class="kejar-card-body">
+                        <h3>Menulis Efektif</h3>
+                        <p>Effective writing practice</p>
+                    </div>
+                    <span class="kejar-card-arrow">→</span>
+                </button>
+            </div>
+
             <footer class="workspace-footer">
                 <a href="../">← API Range Harian</a>
-                <span>Kejar TOEIC</span>
+                <span>Kejar TOEIC + Matrikulasi</span>
             </footer>
         </main>
     </div>

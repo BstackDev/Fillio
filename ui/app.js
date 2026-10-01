@@ -74,7 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
         errorBox: document.getElementById('error-box'),
         generateBtn: document.getElementById('generate-btn'),
         resetBtn: document.getElementById('reset-btn'),
-        testMode: document.getElementById('test-mode'),
         outputArea: document.getElementById('output-area'),
         outputScript: document.getElementById('output-script'),
         copyBtn: document.getElementById('copy-btn'),
@@ -327,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const config = buildDomConfig();
 
         try {
-            const response = await fetch(`/src/api-range-engine.js?t=${Date.now()}`);
+            const response = await fetch(`src/api-range-engine.js?t=${Date.now()}`);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const engineCode = await response.text();
             if (!engineCode.includes('__CONFIG_PLACEHOLDER__')) throw new Error('Placeholder tidak ditemukan');
@@ -353,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
-            const response = await fetch(`/src/weekly-engine.js?t=${Date.now()}`);
+            const response = await fetch(`src/weekly-engine.js?t=${Date.now()}`);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const engineCode = await response.text();
             if (!engineCode.includes('__CONFIG_PLACEHOLDER__')) throw new Error('Placeholder weekly tidak ditemukan.');
@@ -415,6 +414,41 @@ document.addEventListener('DOMContentLoaded', () => {
         els.weeklyCopy.textContent = 'Tersalin!';
         setTimeout(() => els.weeklyCopy.textContent = 'Salin script', 2000);
     });
+
+    const worldScene = document.querySelector('.world-backdrop');
+    if (worldScene && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        let pointerX = 0;
+        let pointerY = 0;
+
+        const updateSceneMotion = () => {
+            const scrollShift = window.scrollY * 0.18;
+            const driftX = ((pointerX - window.innerWidth / 2) / window.innerWidth) * 22;
+            const driftY = ((pointerY - window.innerHeight / 2) / window.innerHeight) * 18;
+            worldScene.style.setProperty('--camera-x', `${(driftX - scrollShift * 0.1).toFixed(2)}px`);
+            worldScene.style.setProperty('--camera-y', `${(driftY + scrollShift * 0.12).toFixed(2)}px`);
+            worldScene.style.transform = `translate3d(${(driftX - scrollShift * 0.1).toFixed(2)}px, ${(driftY + scrollShift * 0.12).toFixed(2)}px, 0)`;
+        };
+
+        window.addEventListener('pointermove', (event) => {
+            pointerX = event.clientX;
+            pointerY = event.clientY;
+            updateSceneMotion();
+        }, { passive: true });
+
+        window.addEventListener('scroll', updateSceneMotion, { passive: true });
+        window.addEventListener('resize', updateSceneMotion);
+        updateSceneMotion();
+
+        const triggerAmbientEvent = () => {
+            if (document.visibilityState !== 'visible') return;
+            worldScene.classList.remove('event-flash');
+            void worldScene.offsetWidth;
+            worldScene.classList.add('event-flash');
+            setTimeout(() => worldScene.classList.remove('event-flash'), 1800);
+        };
+
+        setInterval(triggerAmbientEvent, 15000);
+    }
 
     refreshUI();
     renderWeeklyPlan();

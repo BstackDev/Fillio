@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`[Weekly-App] Mode: ${config.MODE}, Reload: ${config.RELOAD_AFTER_RUN}, MEB: ${ranges.length} minggu`);
 
         try {
-            const res = await fetch(`/src/weekly-engine.js?t=${Date.now()}`);
+            const res = await fetch(`../src/weekly-engine.js?t=${Date.now()}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const src = await res.text();
             if (!src.includes('__CONFIG_PLACEHOLDER__')) {

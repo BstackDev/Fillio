@@ -1,418 +1,118 @@
-// ═══════════════════════════════════════════════════════════════
-//  KEJAR TOEIC — Injector Script Builder
-//  Support: toeicwords (Words) + toeic_reading_preparation (Reading)
-// ═══════════════════════════════════════════════════════════════
+// Fungsi ini mengembalikan string script siap-paste ke Console app.kejar.id
+window.buildKejarInjector = function buildKejarInjector(presetSlug) {
+  const preset = presetSlug || '';
+  return `window.__KEJAR_PRESET_SLUG__ = '${preset}';
+(async () => {
+  document.getElementById('__kj_panel')?.remove();
+  document.getElementById('__kj_style')?.remove();
 
-window.buildKejarInjectorScript = function (gameId) {
-  const game = window.KEJAR_TOEIC_GAMES?.[gameId];
-  if (!game) throw new Error('Game tidak dikenal: ' + gameId);
-
-  switch (gameId) {
-    case 'words':   return buildWordsScript(game.slug);
-    case 'reading': return buildReadingScript(game.slug);
-    default:        throw new Error('Injector belum ada untuk: ' + gameId);
-  }
-};
-
-// ═══════════════════════════════════════════════════════════════
-//  TOEIC WORDS
-//  - Soal input teks (typing)
-//  - Panel pilih ronde + rentang babak
-// ═══════════════════════════════════════════════════════════════
-function buildWordsScript(slug) {
-  return `(async () => {
-  document.getElementById('__tw_panel')?.remove();
-  document.getElementById('__tw_style')?.remove();
-
-  const AUTO_RELOAD = true;
-  const DELAY_MS = 300;
-  const WAIT_ROUND_MS = 800;
-  const GAME = '${slug}';
-  const API_BASE  = '/student/games/api/' + GAME;
-  const HTML_BASE = '/student/games/' + GAME;
+  const PRESET_SLUG = window.__KEJAR_PRESET_SLUG__ || null;
+  const CONCURRENCY = 4;
+  const DELAY_MS = 30;
+  const ROUND_GAP = 200;
+  const FINISH_GAP = 200;
 
   const style = document.createElement('style');
-  style.id = '__tw_style';
+  style.id = '__kj_style';
   style.textContent = \`
-    #__tw_panel{position:fixed;top:16px;right:16px;z-index:2147483647;background:#0f1115;color:#e4e6eb;font:13px -apple-system,system-ui,sans-serif;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);width:400px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
-    #__tw_panel .tw-head{padding:14px 16px;border-bottom:1px solid #1f2229;display:flex;justify-content:space-between;align-items:center;cursor:move;user-select:none}
-    #__tw_panel .tw-title{font-weight:700;font-size:13px;color:#fff}
-    #__tw_panel .tw-title span{color:#4ade80}
-    #__tw_panel .tw-close{background:transparent;border:none;color:#666;cursor:pointer;font-size:20px;padding:0 6px;border-radius:6px}
-    #__tw_panel .tw-close:hover{background:#1f2229;color:#fff}
-    #__tw_panel .tw-body{padding:16px;overflow-y:auto;flex:1}
-    #__tw_panel .tw-label{font-size:10px;text-transform:uppercase;color:#7a7e88;letter-spacing:.6px;margin-bottom:6px;font-weight:700}
-    #__tw_panel select{width:100%;background:#1a1d23;color:#e4e6eb;border:1px solid #2a2e36;border-radius:8px;padding:9px 10px;font:inherit;outline:none}
-    #__tw_panel .tw-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-    #__tw_panel .tw-check{display:flex;align-items:center;gap:8px;font-size:12px;color:#aab;cursor:pointer;margin-bottom:12px}
-    #__tw_panel .tw-check input{accent-color:#4ade80;cursor:pointer}
-    #__tw_panel .tw-info{font-size:11px;color:#7a7e88;text-align:center;margin-bottom:12px}
-    #__tw_panel .tw-list{border:1px solid #1f2229;border-radius:8px;max-height:180px;overflow-y:auto;margin-bottom:14px}
-    #__tw_panel .tw-item{padding:8px 12px;border-bottom:1px solid #1f2229;font-size:11.5px;display:flex;align-items:center;gap:8px}
-    #__tw_panel .tw-item:last-child{border-bottom:none}
-    #__tw_panel .tw-item .tw-num{color:#7a7e88;font:10px ui-monospace,monospace;min-width:22px}
-    #__tw_panel .tw-item .tw-name{flex:1;color:#e4e6eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    #__tw_panel .tw-item .tw-badge{font:9px ui-monospace,monospace;padding:2px 6px;border-radius:4px;background:#1a1d23;color:#7a7e88}
-    #__tw_panel .tw-item .tw-badge.done{background:rgba(74,222,128,.1);color:#4ade80}
-    #__tw_panel .tw-progress{background:#1a1d23;border-radius:6px;overflow:hidden;height:6px;margin:6px 0 12px}
-    #__tw_panel .tw-bar{background:#4ade80;height:100%;transition:width .3s;width:0%}
-    #__tw_panel .tw-status{font:11px/1.5 ui-monospace,monospace;color:#aab;white-space:pre-wrap;margin-bottom:10px;min-height:36px}
-    #__tw_panel .tw-log{font:11px/1.5 ui-monospace,monospace;max-height:160px;overflow-y:auto;border-top:1px solid #1f2229;padding-top:10px}
-    #__tw_panel .tw-log div{padding:2px 0;color:#666}
-    #__tw_panel .tw-log .ok{color:#4ade80}
-    #__tw_panel .tw-log .err{color:#f87171}
-    #__tw_panel .tw-log .warn{color:#fbbf24}
-    #__tw_panel .tw-log .info{color:#60a5fa}
-    #__tw_panel .tw-footer{padding:0 16px 16px;display:flex;gap:8px}
-    #__tw_panel .tw-btn{flex:1;background:#4ade80;color:#0f1115;border:none;border-radius:8px;padding:11px;font:inherit;font-weight:700;cursor:pointer}
-    #__tw_panel .tw-btn:disabled{opacity:.35;cursor:not-allowed}
+    #__kj_panel{position:fixed;top:16px;right:16px;z-index:2147483647;background:#0f1115;color:#e4e6eb;font:13px -apple-system,system-ui,sans-serif;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.6);width:460px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+    #__kj_panel .kj-head{padding:14px 16px;border-bottom:1px solid #1f2229;display:flex;justify-content:space-between;align-items:center;cursor:move;user-select:none}
+    #__kj_panel .kj-title{font-weight:700;font-size:13px;color:#fff}
+    #__kj_panel .kj-title span{color:#4ade80}
+    #__kj_panel .kj-close{background:transparent;border:none;color:#666;cursor:pointer;font-size:20px;padding:0 6px;border-radius:6px}
+    #__kj_panel .kj-close:hover{background:#1f2229;color:#fff}
+    #__kj_panel .kj-body{padding:16px;overflow-y:auto;flex:1}
+    #__kj_panel .kj-label{font-size:10px;text-transform:uppercase;color:#7a7e88;letter-spacing:.6px;margin-bottom:6px;font-weight:700}
+    #__kj_panel .kj-field{margin-bottom:14px}
+    #__kj_panel select{width:100%;background:#1a1d23;color:#e4e6eb;border:1px solid #2a2e36;border-radius:8px;padding:9px 10px;font:inherit;outline:none}
+    #__kj_panel select:disabled{opacity:.6}
+    #__kj_panel .kj-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    #__kj_panel .kj-check{display:flex;align-items:center;gap:8px;font-size:12px;color:#aab;cursor:pointer}
+    #__kj_panel .kj-check input{accent-color:#4ade80}
+    #__kj_panel .kj-btn{width:100%;background:#4ade80;color:#0f1115;border:none;border-radius:8px;padding:11px;font:inherit;font-weight:700;cursor:pointer}
+    #__kj_panel .kj-btn:disabled{opacity:.35;cursor:not-allowed}
+    #__kj_panel .kj-btn.kj-secondary{background:#2a2e36;color:#e4e6eb;margin-top:8px}
+    #__kj_panel .kj-info{font-size:11px;color:#7a7e88;margin-top:8px;text-align:center}
+    #__kj_panel .kj-progress{background:#1a1d23;border-radius:6px;overflow:hidden;height:6px;margin:4px 0 12px}
+    #__kj_panel .kj-progress-bar{background:#4ade80;height:100%;transition:width .3s;width:0%}
+    #__kj_panel .kj-status{font:11px/1.6 ui-monospace,Menlo,monospace;color:#aab;white-space:pre-wrap;word-break:break-word}
+    #__kj_panel .kj-log{margin-top:10px;font:11px/1.5 ui-monospace,Menlo,monospace;max-height:340px;overflow-y:auto;background:#0a0c10;border-radius:6px;padding:8px}
+    #__kj_panel .kj-log div{padding:2px 0;color:#888;white-space:pre-wrap;word-break:break-word}
+    #__kj_panel .kj-log .ok{color:#4ade80}
+    #__kj_panel .kj-log .err{color:#f87171}
+    #__kj_panel .kj-log .warn{color:#fbbf24}
+    #__kj_panel .kj-log .skip{color:#7a7e88}
+    #__kj_panel .kj-log .info{color:#60a5fa}
+    #__kj_panel .kj-error{margin-top:12px;padding:10px 12px;background:#2a1414;border:1px solid #4a1d1d;color:#f87171;border-radius:8px;font:11px/1.5 ui-monospace,monospace;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto}
+    #__kj_panel .kj-footer{padding:0 16px 16px}
   \`;
   document.head.appendChild(style);
 
   const panel = document.createElement('div');
-  panel.id = '__tw_panel';
+  panel.id = '__kj_panel';
   panel.innerHTML = \`
-    <div class="tw-head">
-      <div class="tw-title">TOEIC <span>WORDS</span></div>
-      <button class="tw-close">×</button>
+    <div class="kj-head" id="__kj_head">
+      <div class="kj-title">KEJAR <span>AUTO</span></div>
+      <button class="kj-close" id="__kj_close">×</button>
     </div>
-    <div class="tw-body"><div class="tw-status">Memuat ronde…</div></div>
-    <div class="tw-footer" style="display:none">
-      <button class="tw-btn" id="__tw_run" disabled>Jalankan</button>
+    <div class="kj-body" id="__kj_body"><div class="kj-status">Memuat…</div></div>
+    <div class="kj-footer" id="__kj_footer" style="display:none">
+      <button class="kj-btn" id="__kj_run" disabled>Jalankan</button>
     </div>
   \`;
   document.body.appendChild(panel);
 
   (() => {
-    const h = panel.querySelector('.tw-head');
-    let drag=false,sx,sy,ox,oy;
-    h.addEventListener('mousedown', e => {
-      if (e.target.closest('button')) return;
-      drag=true;
-      const r = panel.getBoundingClientRect();
-      sx=e.clientX;sy=e.clientY;ox=r.left;oy=r.top;
-      panel.style.left=r.left+'px';panel.style.top=r.top+'px';
-      panel.style.right='auto';panel.style.bottom='auto';
-      e.preventDefault();
-    });
-    document.addEventListener('mousemove', e => {
-      if(!drag)return;
-      panel.style.left=(ox+e.clientX-sx)+'px';
-      panel.style.top=(oy+e.clientY-sy)+'px';
-    });
-    document.addEventListener('mouseup',()=>drag=false);
-  })();
-
-  panel.querySelector('.tw-close').onclick = () => { panel.remove(); style.remove(); };
-
-  const bodyEl = panel.querySelector('.tw-body');
-  const footerEl = panel.querySelector('.tw-footer');
-  const runBtn = panel.querySelector('#__tw_run');
-
-  const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
-  if (!csrf) { bodyEl.innerHTML = '<div class="tw-status" style="color:#f87171">❌ CSRF tidak ada</div>'; return; }
-
-  const H = { 'X-Requested-With':'XMLHttpRequest', 'X-CSRF-TOKEN':csrf, 'Accept':'application/json' };
-  const Hpost = { 'X-Requested-With':'XMLHttpRequest', 'X-CSRF-TOKEN':csrf, 'Accept':'*/*', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8' };
-
-  const getJson = async (url) => {
-    const r = await fetch(url, { headers: H, credentials:'same-origin' });
-    if (!r.ok) throw new Error('GET ' + r.status);
-    return r.json();
-  };
-  const post = async (url, data) => {
-    const r = await fetch(url, { method:'POST', headers: Hpost, credentials:'same-origin', body: new URLSearchParams(data) });
-    const t = await r.text();
-    try { return JSON.parse(t); } catch (_) { return { _raw: t.slice(0,200) }; }
-  };
-
-  const sr = await getJson(API_BASE + '/stages');
-  const rondes = (sr.data || []).sort((a,b) => a.order - b.order);
-  if (!rondes.length) { bodyEl.innerHTML = '<div class="tw-status">❌ Nggak ada ronde</div>'; return; }
-
-  const urlStageId = location.pathname.match(/stages\\/([^\\/]+)/)?.[1];
-  let currentRonde = rondes.find(r => r.id === urlStageId) || rondes[0];
-
-  async function renderRonde(rondeId) {
-    bodyEl.innerHTML = '<div class="tw-status">Memuat babak…</div>';
-    footerEl.style.display = 'none';
-
-    const rr = await getJson(API_BASE + '/stages/' + rondeId + '/rounds');
-    const rounds = (rr.data || []).sort((a,b) => a.order - b.order);
-
-    const rondeOptions = rondes.map(r =>
-      \`<option value="\${r.id}" \${r.id === rondeId ? 'selected' : ''}>#\${r.order} \${r.title}</option>\`
-    ).join('');
-
-    if (!rounds.length) {
-      bodyEl.innerHTML = \`<div class="tw-label">Ronde</div><select id="__tw_ronde">\${rondeOptions}</select><div class="tw-status" style="margin-top:14px">⚠ Ronde ini nggak punya babak</div>\`;
-      panel.querySelector('#__tw_ronde').onchange = e => renderRonde(e.target.value);
-      return;
-    }
-
-    const listHtml = rounds.map((r, i) => {
-      const tasks = Array.isArray(r.task) ? r.task : [];
-      const perfect = tasks.some(t => t.finish_time && parseFloat(t.score) >= 100);
-      return \`<div class="tw-item"><span class="tw-num">#\${r.order}</span><span class="tw-name">\${r.title}</span><span class="tw-badge \${perfect ? 'done' : ''}">\${perfect ? '100' : '—'}</span></div>\`;
-    }).join('');
-
-    const opts = rounds.map((r, i) => \`<option value="\${i}">#\${r.order} \${r.title}</option>\`).join('');
-
-    let lastNotPerfect = rounds.length - 1;
-    for (let i = rounds.length - 1; i >= 0; i--) {
-      const tasks = Array.isArray(rounds[i].task) ? rounds[i].task : [];
-      const perfect = tasks.some(t => t.finish_time && parseFloat(t.score) >= 100);
-      if (!perfect) { lastNotPerfect = i; break; }
-    }
-
-    bodyEl.innerHTML = \`
-      <div class="tw-label">Ronde</div>
-      <select id="__tw_ronde" style="margin-bottom:14px">\${rondeOptions}</select>
-
-      <div class="tw-label">Rentang babak</div>
-      <div class="tw-row2">
-        <div>
-          <div style="font-size:10px;color:#7a7e88;margin-bottom:4px;text-transform:uppercase">Dari</div>
-          <select id="__tw_from">\${opts}</select>
-        </div>
-        <div>
-          <div style="font-size:10px;color:#7a7e88;margin-bottom:4px;text-transform:uppercase">Sampai</div>
-          <select id="__tw_to">\${opts}</select>
-        </div>
-      </div>
-
-      <label class="tw-check">
-        <input type="checkbox" id="__tw_skip" checked>
-        <span>Lewati babak yang sudah skor 100</span>
-      </label>
-
-      <div class="tw-info" id="__tw_info">—</div>
-      <div class="tw-label">Daftar babak (\${rounds.length})</div>
-      <div class="tw-list">\${listHtml}</div>
-      <div class="tw-progress"><div class="tw-bar"></div></div>
-      <div class="tw-status">Siap dijalankan.</div>
-      <div class="tw-log"></div>
-    \`;
-
-    const rondeEl = panel.querySelector('#__tw_ronde');
-    const fromEl  = panel.querySelector('#__tw_from');
-    const toEl    = panel.querySelector('#__tw_to');
-    const skipEl  = panel.querySelector('#__tw_skip');
-    const infoEl  = panel.querySelector('#__tw_info');
-    const barEl   = panel.querySelector('.tw-bar');
-    const logEl   = panel.querySelector('.tw-log');
-    const statEl  = panel.querySelector('.tw-status');
-
-    fromEl.value = '0';
-    toEl.value = String(lastNotPerfect);
-
-    const updateInfo = () => {
-      const a = +fromEl.value, b = +toEl.value;
-      if (b < a) { infoEl.innerHTML = '<span style="color:#f87171">⚠ Babak akhir harus ≥ awal</span>'; runBtn.disabled = true; return; }
-      const selected = rounds.slice(a, b + 1);
-      let toRun = selected.length;
-      if (skipEl.checked) {
-        toRun = selected.filter(r => {
-          const tasks = Array.isArray(r.task) ? r.task : [];
-          return !tasks.some(t => t.finish_time && parseFloat(t.score) >= 100);
-        }).length;
-      }
-      infoEl.textContent = \`Akan memproses \${toRun} babak (dari \${selected.length} dipilih)\`;
-      runBtn.disabled = toRun === 0;
-    };
-
-    rondeEl.onchange = e => renderRonde(e.target.value);
-    fromEl.onchange = updateInfo;
-    toEl.onchange = updateInfo;
-    skipEl.onchange = updateInfo;
-    updateInfo();
-    footerEl.style.display = 'flex';
-
-    runBtn.onclick = async () => {
-      const a = +fromEl.value, b = +toEl.value;
-      if (b < a) return;
-      let selected = rounds.slice(a, b + 1);
-      if (skipEl.checked) {
-        selected = selected.filter(r => {
-          const tasks = Array.isArray(r.task) ? r.task : [];
-          return !tasks.some(t => t.finish_time && parseFloat(t.score) >= 100);
-        });
-      }
-      if (!selected.length) { statEl.textContent = '⚠ Nggak ada babak untuk dijalankan'; return; }
-
-      runBtn.disabled = true;
-      runBtn.textContent = 'Menjalankan…';
-      logEl.innerHTML = '';
-
-      const addLog = (t, c) => {
-        const d = document.createElement('div');
-        if (c) d.className = c;
-        d.textContent = t;
-        logEl.appendChild(d);
-        logEl.scrollTop = logEl.scrollHeight;
-      };
-
-      let totalOk = 0, totalFail = 0, doneRounds = 0;
-
-      for (let ri = 0; ri < selected.length; ri++) {
-        const round = selected[ri];
-        const label = \`[\${ri+1}/\${selected.length}] #\${round.order} \${round.title}\`;
-        statEl.textContent = label + '\\nmemuat soal…';
-        addLog('▶ ' + label, 'info');
-
-        try {
-          const examsUrl = HTML_BASE + '/stages/' + rondeId + '/rounds/' + round.id + '/exams';
-          const html = await fetch(examsUrl, { credentials:'same-origin' }).then(r => r.text());
-          const doc = new DOMParser().parseFromString(html, 'text/html');
-
-          const dm = html.match(/var dataTask\\s*=\\s*(\\{[\\s\\S]*?\\});/);
-          if (!dm) throw new Error('dataTask tidak ada');
-          const dataTask = JSON.parse(dm[1]);
-          const taskId = dataTask.id;
-
-          const ids = [...doc.querySelectorAll('.question-item[data-repeatance="0"]')].map(el => el.dataset.id).filter(Boolean);
-          if (!ids.length) { addLog('  ⚠ 0 soal', 'warn'); continue; }
-          addLog('  ' + ids.length + ' soal', 'ok');
-
-          const checkUrl  = HTML_BASE + '/stages/' + rondeId + '/rounds/' + round.id + '/check';
-          const finishUrl = HTML_BASE + '/stages/' + rondeId + '/rounds/' + round.id + '/' + taskId + '/finishes';
-
-          let ok = 0, fail = 0;
-          for (let i = 0; i < ids.length; i++) {
-            const qid = ids[i];
-            statEl.textContent = label + '\\nsoal ' + (i+1) + '/' + ids.length + ' — ok=' + ok + ' fail=' + fail;
-            try {
-              const pre = await post(checkUrl, { id: qid, task_id: taskId, answer: 'x', repeatance: 'false', type: 'TEXT', _token: csrf });
-              const correct = pre.answer || pre.correct_answer || pre.correct;
-              if (!correct) { fail++; continue; }
-
-              await new Promise(r => setTimeout(r, 120));
-              const sub = await post(checkUrl, { id: qid, task_id: taskId, answer: correct, repeatance: 'false', type: 'TEXT', _token: csrf });
-              if (sub.status === true || sub.is_correct === true) ok++;
-              else fail++;
-            } catch (_) { fail++; }
-            await new Promise(r => setTimeout(r, DELAY_MS));
-          }
-
-          try { await post(finishUrl, { _token: csrf }); } catch (_) {}
-          addLog('  ✅ ok=' + ok + ' fail=' + fail, 'ok');
-          totalOk += ok; totalFail += fail; doneRounds++;
-        } catch (e) {
-          addLog('  ❌ ' + e.message, 'err');
-          totalFail++;
-        }
-        barEl.style.width = Math.round(((ri+1)/selected.length)*100) + '%';
-        await new Promise(r => setTimeout(r, WAIT_ROUND_MS));
-      }
-
-      statEl.innerHTML = '<b>✅ Selesai</b>\\nBabak: ' + doneRounds + '\\nSoal: ok=' + totalOk + ' fail=' + totalFail;
-      barEl.style.background = totalFail === 0 ? '#4ade80' : '#fbbf24';
-      runBtn.disabled = false;
-      runBtn.textContent = 'Jalankan lagi';
-
-      if (AUTO_RELOAD) {
-        addLog('🔄 Reload 3s…', 'info');
-        setTimeout(() => location.reload(), 3000);
-      }
-    };
-  }
-
-  await renderRonde(currentRonde.id);
-})();`;
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  TOEIC READING PREPARATIONS
-//  - Soal pilihan ganda (.question-group)
-//  - Panel pilih rentang ronde
-// ═══════════════════════════════════════════════════════════════
-function buildReadingScript(slug) {
-  return `(async () => {
-  document.getElementById('__kejar_panel')?.remove();
-  document.getElementById('__kejar_style')?.remove();
-
-  const style = document.createElement('style');
-  style.id = '__kejar_style';
-  style.textContent = \`
-    #__kejar_panel{position:fixed;top:16px;right:16px;z-index:2147483647;background:#0f1115;color:#e4e6eb;font:13px -apple-system,system-ui,sans-serif;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);width:380px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
-    #__kejar_panel .kp-head{padding:14px 16px;border-bottom:1px solid #1f2229;display:flex;justify-content:space-between;align-items:center;cursor:move;user-select:none}
-    #__kejar_panel .kp-title{font-weight:700;font-size:13px;color:#fff}
-    #__kejar_panel .kp-title span{color:#4ade80}
-    #__kejar_panel .kp-close{background:transparent;border:none;color:#666;cursor:pointer;font-size:20px;padding:0 6px;border-radius:6px}
-    #__kejar_panel .kp-close:hover{background:#1f2229;color:#fff}
-    #__kejar_panel .kp-body{padding:16px;overflow-y:auto;flex:1}
-    #__kejar_panel .kp-label{font-size:10px;text-transform:uppercase;color:#7a7e88;letter-spacing:.6px;margin-bottom:6px;font-weight:700}
-    #__kejar_panel .kp-field{margin-bottom:14px}
-    #__kejar_panel select{width:100%;background:#1a1d23;color:#e4e6eb;border:1px solid #2a2e36;border-radius:8px;padding:9px 10px;font:inherit;outline:none}
-    #__kejar_panel .kp-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    #__kejar_panel .kp-check{display:flex;align-items:center;gap:8px;font-size:12px;color:#aab;cursor:pointer}
-    #__kejar_panel .kp-check input{accent-color:#4ade80}
-    #__kejar_panel .kp-btn{width:100%;background:#4ade80;color:#0f1115;border:none;border-radius:8px;padding:11px;font:inherit;font-weight:700;cursor:pointer}
-    #__kejar_panel .kp-btn:disabled{opacity:.35;cursor:not-allowed}
-    #__kejar_panel .kp-btn.kp-secondary{background:#2a2e36;color:#e4e6eb;margin-top:8px}
-    #__kejar_panel .kp-info{font-size:11px;color:#7a7e88;margin-top:8px;text-align:center}
-    #__kejar_panel .kp-progress{background:#1a1d23;border-radius:6px;overflow:hidden;height:6px;margin:4px 0 12px}
-    #__kejar_panel .kp-progress-bar{background:#4ade80;height:100%;transition:width .3s;width:0%}
-    #__kejar_panel .kp-status{font:11px/1.6 ui-monospace,Menlo,monospace;color:#aab;white-space:pre-wrap;word-break:break-word}
-    #__kejar_panel .kp-log{margin-top:10px;font:11px/1.5 ui-monospace,Menlo,monospace;max-height:200px;overflow-y:auto}
-    #__kejar_panel .kp-log div{padding:2px 0;color:#666}
-    #__kejar_panel .kp-log .ok{color:#4ade80}
-    #__kejar_panel .kp-log .err{color:#f87171}
-    #__kejar_panel .kp-log .skip{color:#7a7e88}
-    #__kejar_panel .kp-footer{padding:0 16px 16px}
-  \`;
-  document.head.appendChild(style);
-
-  const panel = document.createElement('div');
-  panel.id = '__kejar_panel';
-  panel.innerHTML = \`
-    <div class="kp-head" id="__kp_head">
-      <div class="kp-title">KEJAR <span>TOEIC</span></div>
-      <button class="kp-close" id="__kp_close">×</button>
-    </div>
-    <div class="kp-body" id="__kp_body">
-      <div class="kp-status" id="__kp_init">Memuat daftar ronde…</div>
-    </div>
-    <div class="kp-footer" id="__kp_footer" style="display:none">
-      <button class="kp-btn" id="__kp_run" disabled>Jalankan</button>
-    </div>
-  \`;
-  document.body.appendChild(panel);
-
-  (() => {
-    const head = panel.querySelector('#__kp_head');
-    let dragging=false, sx=0, sy=0, ox=0, oy=0;
+    const head = panel.querySelector('#__kj_head');
+    let d=false,sx=0,sy=0,ox=0,oy=0;
     head.addEventListener('mousedown', e => {
       if (e.target.closest('button')) return;
-      dragging=true;
-      const r = panel.getBoundingClientRect();
+      d=true;
+      const r=panel.getBoundingClientRect();
       sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
       panel.style.left=r.left+'px'; panel.style.top=r.top+'px';
       panel.style.right='auto'; panel.style.bottom='auto';
       e.preventDefault();
     });
     document.addEventListener('mousemove', e => {
-      if (!dragging) return;
+      if(!d) return;
       panel.style.left=(ox+e.clientX-sx)+'px';
       panel.style.top =(oy+e.clientY-sy)+'px';
     });
-    document.addEventListener('mouseup', () => dragging=false);
+    document.addEventListener('mouseup', () => d=false);
   })();
 
-  const closeBtn = panel.querySelector('#__kp_close');
-  const bodyEl   = panel.querySelector('#__kp_body');
-  const footerEl = panel.querySelector('#__kp_footer');
-  const runBtn   = panel.querySelector('#__kp_run');
-  const initEl   = panel.querySelector('#__kp_init');
-  closeBtn.addEventListener('click', () => { panel.remove(); style.remove(); });
+  const bodyEl = panel.querySelector('#__kj_body');
+  const footerEl = panel.querySelector('#__kj_footer');
+  const runBtn = panel.querySelector('#__kj_run');
+  panel.querySelector('#__kj_close').addEventListener('click', () => { panel.remove(); style.remove(); });
+
+  const showError = (title, err) => {
+    const box = document.createElement('div');
+    box.className = 'kj-error';
+    const msg = err && (err.stack || err.message) || String(err);
+    box.textContent = '⚠ ' + title + '\\n\\n' + msg;
+    bodyEl.appendChild(box);
+  };
 
   try {
-    const token = document.querySelector('meta[name="csrf-token"]')?.content;
-    if (!token) throw new Error('csrf-token tidak ditemukan');
+    const token = document.querySelector('meta[name="csrf-token"]')?.content
+                || document.querySelector('input[name="_token"]')?.value;
+    if (!token) throw new Error('csrf-token tidak ditemukan. Paste di halaman app.kejar.id yang sudah login.');
 
-    const GAME = '${slug}';
-    const API_BASE = '/student/games/api/' + GAME;
-    const HTML_BASE = '/student/games/' + GAME;
+    const GAMES = [
+      { slug: 'toeic_reading_preparation', label: 'TOEIC Reading Preparations' },
+      { slug: 'toeicwords', label: 'TOEIC Words' },
+      { slug: 'obr', label: 'Operasi Bilangan Riil' },
+      { slug: 'katabaku', label: 'Kata Baku' },
+      { slug: 'vocabulary', label: 'Vocabulary' },
+      { slug: 'menulisefektif', label: 'Menulis Efektif' }
+    ];
+
+    const urlMatch = location.pathname.match(/\\/games\\/([^/]+)\\//);
+    const urlSlug = urlMatch ? urlMatch[1] : null;
+    const preselect = PRESET_SLUG || urlSlug;
+    const initialGame = GAMES.find(g => g.slug === preselect) || GAMES[0];
 
     const H = { 'X-Requested-With':'XMLHttpRequest', 'X-CSRF-TOKEN':token, 'Accept':'application/json' };
     const Hpost = Object.assign({ 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8' }, H);
@@ -420,166 +120,314 @@ function buildReadingScript(slug) {
 
     const getJson = async (url) => {
       const r = await fetch(url, { headers:H, credentials:'same-origin' });
-      if (!r.ok) throw new Error('GET ' + r.status);
+      if (!r.ok) throw new Error('GET ' + url + ' → HTTP ' + r.status);
       return r.json();
     };
-    const postForm = async (url, fields, tk) => {
-      const headers = tk ? Object.assign({}, Hpost, { 'X-CSRF-TOKEN': tk }) : Hpost;
-      const r = await fetch(url, { method:'POST', headers, credentials:'same-origin', body:new URLSearchParams(fields) });
-      if (!r.ok) throw new Error('POST ' + r.status);
-      const t = await r.text();
-      try { return JSON.parse(t); } catch (_) { return { _raw: t }; }
-    };
 
-    const stagesRes = await getJson(API_BASE + '/stages');
-    const stages = (stagesRes.data || []).sort((a,b) => a.order - b.order);
-    if (stages.length === 0) throw new Error('Tidak ada ronde.');
-
-    const urlMatch = location.pathname.match(/stages\\/([^/]+)/);
-    const curIdx = urlMatch ? stages.findIndex(s => s.id === urlMatch[1]) : -1;
-    const startDefault = curIdx >= 0 ? curIdx : 0;
+    const gamesOptions = GAMES.map(g => '<option value="' + g.slug + '"' + (g.slug===initialGame.slug?' selected':'') + '>' + g.label + '</option>').join('');
 
     bodyEl.innerHTML = \`
-      <div class="kp-field"><div class="kp-label">Terdeteksi \${stages.length} ronde</div></div>
-      <div class="kp-row">
-        <div class="kp-field">
-          <div class="kp-label">Mulai dari</div>
-          <select id="__kp_from">
-            \${stages.map((s,i) => \`<option value="\${i}" \${i===startDefault?'selected':''}>#\${s.order} \${s.title}</option>\`).join('')}
-          </select>
+      <div class="kj-field">
+        <div class="kj-label">Pilih Materi</div>
+        <select id="__kj_game">\${gamesOptions}</select>
+      </div>
+      <div class="kj-field" id="__kj_range_wrap" style="display:none">
+        <div class="kj-label" id="__kj_count">Memuat ronde…</div>
+      </div>
+      <div class="kj-row">
+        <div class="kj-field">
+          <div class="kj-label">Mulai dari</div>
+          <select id="__kj_from"></select>
         </div>
-        <div class="kp-field">
-          <div class="kp-label">Sampai</div>
-          <select id="__kp_to">
-            \${stages.map((s,i) => \`<option value="\${i}" \${i===Math.min(startDefault+1,stages.length-1)?'selected':''}>#\${s.order} \${s.title}</option>\`).join('')}
-          </select>
+        <div class="kj-field">
+          <div class="kj-label">Sampai</div>
+          <select id="__kj_to"></select>
         </div>
       </div>
-      <div class="kp-field">
-        <label class="kp-check"><input type="checkbox" id="__kp_skip" checked> Lewati yang sudah skor 100</label>
+      <div class="kj-field">
+        <label class="kj-check"><input type="checkbox" id="__kj_skip" checked> Lewati ronde yang sudah skor 100</label>
       </div>
-      <div class="kp-info" id="__kp_info">—</div>
+      <div class="kj-info" id="__kj_info">—</div>
     \`;
 
-    const fromEl = bodyEl.querySelector('#__kp_from');
-    const toEl   = bodyEl.querySelector('#__kp_to');
-    const skipEl = bodyEl.querySelector('#__kp_skip');
-    const infoEl = bodyEl.querySelector('#__kp_info');
+    const gameEl = bodyEl.querySelector('#__kj_game');
+    const fromEl = bodyEl.querySelector('#__kj_from');
+    const toEl   = bodyEl.querySelector('#__kj_to');
+    const skipEl = bodyEl.querySelector('#__kj_skip');
+    const infoEl = bodyEl.querySelector('#__kj_info');
+    const countEl = bodyEl.querySelector('#__kj_count');
+    const rangeWrap = bodyEl.querySelector('#__kj_range_wrap');
+
+    let stages = [];
 
     const updateInfo = () => {
       const a = +fromEl.value, b = +toEl.value;
       if (b < a) { infoEl.textContent = '⚠ Ronde akhir harus ≥ awal'; runBtn.disabled = true; return; }
-      infoEl.textContent = \`Akan memproses \${b - a + 1} ronde\`;
+      infoEl.textContent = 'Akan memproses ' + (b - a + 1) + ' ronde';
       runBtn.disabled = false;
     };
+
+    const loadStages = async (slug) => {
+      countEl.textContent = 'Memuat ronde…';
+      infoEl.textContent = '';
+      const j = await getJson('/student/games/api/' + slug + '/stages');
+      stages = (j.data || []).sort((a,b) => a.order - b.order);
+      if (!stages.length) throw new Error('Slug "' + slug + '" tidak punya stage.');
+
+      const urlSid = (location.pathname.match(/\\/stages\\/([^/]+)/) || [])[1];
+      const curIdx = urlSid ? stages.findIndex(s => s.id === urlSid) : -1;
+      const start = curIdx >= 0 ? curIdx : 0;
+
+      fromEl.innerHTML = stages.map((s,i) => '<option value="' + i + '"' + (i===start?' selected':'') + '>#' + s.order + ' ' + s.title + '</option>').join('');
+      toEl.innerHTML = stages.map((s,i) => '<option value="' + i + '"' + (i===Math.min(start+1, stages.length-1)?' selected':'') + '>#' + s.order + ' ' + s.title + '</option>').join('');
+
+      countEl.textContent = 'Terdeteksi ' + stages.length + ' ronde';
+      rangeWrap.style.display = 'block';
+      updateInfo();
+    };
+
     fromEl.addEventListener('change', updateInfo);
     toEl.addEventListener('change', updateInfo);
-    updateInfo();
-    footerEl.style.display = 'block';
-    initEl.remove();
+
+    gameEl.addEventListener('change', async () => {
+      runBtn.disabled = true;
+      try { await loadStages(gameEl.value); }
+      catch (e) { showError('Gagal load ronde', e); }
+    });
+
+    try {
+      await loadStages(gameEl.value);
+      footerEl.style.display = 'block';
+    } catch (e) {
+      showError('Gagal memuat daftar ronde', e);
+      footerEl.style.display = 'block';
+      runBtn.disabled = true;
+    }
+
+    const postForm = async (url, fields, tk, tries = 3) => {
+      const headers = tk ? Object.assign({}, Hpost, { 'X-CSRF-TOKEN': tk }) : Hpost;
+      let lastErr;
+      for (let i = 0; i < tries; i++) {
+        try {
+          const r = await fetch(url, { method:'POST', headers, credentials:'same-origin', body:new URLSearchParams(fields) });
+          if (r.status === 429) { await sleep(500 * (i + 1)); lastErr = new Error('HTTP 429'); continue; }
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const t = await r.text();
+          if (!t || !t.trim()) { lastErr = new Error('empty body'); await sleep(300 * (i + 1)); continue; }
+          try { return JSON.parse(t); } catch (_) { lastErr = new Error('bad json'); continue; }
+        } catch (e) {
+          lastErr = e;
+          if (i === tries - 1) throw e;
+          await sleep(300 * (i + 1));
+        }
+      }
+      throw lastErr || new Error('post failed');
+    };
+
+    const runBatch = async (items, worker, onProgress) => {
+      const results = new Array(items.length);
+      let idx = 0, done = 0;
+      const n = Math.min(CONCURRENCY, items.length);
+      const runners = Array.from({ length: n }, async () => {
+        while (true) {
+          const i = idx++;
+          if (i >= items.length) return;
+          try { results[i] = await worker(items[i], i); }
+          catch (e) { results[i] = { ok: false, error: e.message }; }
+          done++;
+          if (onProgress) onProgress(done, items.length, results[i]);
+          await sleep(DELAY_MS);
+        }
+      });
+      await Promise.all(runners);
+      return results;
+    };
+
+    const buildVariants = (rawAnswer) => {
+      const set = new Set();
+      const push = (s) => {
+        if (typeof s !== 'string') return;
+        const raw = s;
+        const trimmed = raw.trim().replace(/\\s+/g, ' ');
+        if (!trimmed) return;
+        set.add(raw);
+        set.add(trimmed);
+        set.add(trimmed.toLowerCase());
+        set.add(trimmed.toUpperCase());
+        set.add(trimmed.replace(/[.!?]+$/, '').trim());
+        if (raw.includes('/')) {
+          raw.split('/').forEach(p => {
+            const t = p.trim();
+            if (t) { set.add(t); set.add(t.toLowerCase()); set.add(t.toUpperCase()); }
+          });
+        }
+      };
+      if (Array.isArray(rawAnswer)) rawAnswer.forEach(push);
+      else if (typeof rawAnswer === 'string') push(rawAnswer);
+      return Array.from(set).filter(x => x.length > 0);
+    };
+
+    const parseExams = (html) => {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      if (doc.querySelector('.question-group')) {
+        const dm = html.match(/var dataTask\\s*=\\s*(\\{[\\s\\S]*?\\});/);
+        if (!dm) throw new Error('dataTask tidak ditemukan');
+        const dataTask = JSON.parse(dm[1]);
+        const tk = doc.querySelector('meta[name="csrf-token"]')?.content;
+        const items = Array.from(doc.querySelectorAll('.question-group')).map(qg => ({
+          id: qg.dataset.id,
+          type: qg.dataset.type || 'pilihan_ganda',
+          prompt: (qg.querySelector('.question p, ._pilihan_ganda_question p') || {}).innerText || '(?)',
+          needsType: true
+        }));
+        return { kind: 'pilihan_ganda', taskId: dataTask.id, token: tk, items };
+      }
+      const form = doc.querySelector('form.question-list');
+      if (form) {
+        const items = Array.from(doc.querySelectorAll('.question-item')).map(qi => ({
+          id: qi.dataset.id,
+          type: form.dataset.type,
+          prompt: qi.querySelector('.question-text')?.innerText.trim() || '(?)',
+          needsType: false
+        }));
+        return {
+          kind: form.dataset.type || 'vocabulary',
+          taskId: form.dataset.task,
+          checkUrl: form.dataset.check,
+          token: doc.querySelector('input[name="_token"]')?.value,
+          items
+        };
+      }
+      throw new Error('Tipe soal tidak dikenal.');
+    };
 
     runBtn.addEventListener('click', async () => {
+      if (!stages.length) { showError('Ronde belum dimuat', new Error('Tunggu load selesai')); return; }
+      const slug = gameEl.value;
       const a = +fromEl.value, b = +toEl.value, skip = skipEl.checked;
       const todo = stages.slice(a, b + 1);
+      const apiBase = '/student/games/api/' + slug;
+      const htmlBase = '/student/games/' + slug;
 
       bodyEl.innerHTML = \`
-        <div class="kp-progress"><div class="kp-progress-bar" id="__kp_bar"></div></div>
-        <div class="kp-status" id="__kp_stat">Memulai…</div>
-        <div class="kp-log" id="__kp_log"></div>
+        <div class="kj-progress"><div class="kj-progress-bar" id="__kj_bar"></div></div>
+        <div class="kj-status" id="__kj_stat">Memulai…</div>
+        <div class="kj-log" id="__kj_log"></div>
       \`;
-      footerEl.innerHTML = \`<button class="kp-btn kp-secondary" id="__kp_stop">Hentikan</button>\`;
+      footerEl.innerHTML = '<button class="kj-btn kj-secondary" id="__kj_stop">Hentikan</button>';
       let stopFlag = false;
-      panel.querySelector('#__kp_stop').addEventListener('click', () => stopFlag = true);
+      panel.querySelector('#__kj_stop').addEventListener('click', () => stopFlag = true);
 
-      const barEl  = panel.querySelector('#__kp_bar');
-      const statEl = panel.querySelector('#__kp_stat');
-      const logEl  = panel.querySelector('#__kp_log');
+      const barEl  = panel.querySelector('#__kj_bar');
+      const statEl = panel.querySelector('#__kj_stat');
+      const logEl  = panel.querySelector('#__kj_log');
       const addLog = (t, cls) => { const d = document.createElement('div'); if (cls) d.className = cls; d.textContent = t; logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; };
 
-      let grandOk = 0, grandFail = 0, totalRounds = 0, totalPerfect = 0;
+      addLog('Materi: ' + slug, 'info');
+      addLog('Rentang: ' + (a+1) + '–' + (b+1) + ' (' + todo.length + ' ronde)', 'info');
+
+      let totalStages = 0, totalRounds = 0, totalPerfect = 0, grandOk = 0, grandFail = 0;
+      const t0 = Date.now();
 
       for (let si = 0; si < todo.length; si++) {
         if (stopFlag) break;
         const stage = todo[si];
-        const label = \`[\${si+1}/\${todo.length}] #\${stage.order} \${stage.title}\`;
-        statEl.textContent = \`\${label}\\nmemuat babak…\`;
+        const sLabel = '[' + (si+1) + '/' + todo.length + '] #' + stage.order + ' ' + stage.title;
+        statEl.textContent = sLabel + '\\nmemuat babak…';
+        addLog('\\n▶ ' + sLabel, 'ok');
 
+        let rounds = [];
         try {
-          const rr = await getJson(API_BASE + '/stages/' + stage.id + '/rounds');
-          const rounds = (rr.data || []).sort((a,b) => a.order - b.order);
-          addLog(\`▶ \${label}\`, 'ok');
+          const rr = await getJson(apiBase + '/stages/' + stage.id + '/rounds');
+          rounds = (rr.data || []).sort((x,y) => x.order - y.order);
+          addLog('  ' + rounds.length + ' babak ditemukan');
+          totalStages++;
+        } catch (e) { addLog('  ❌ ' + e.message, 'err'); continue; }
 
-          for (let ri = 0; ri < rounds.length; ri++) {
-            if (stopFlag) break;
-            const round = rounds[ri];
-            const rlabel = \`babak \${ri+1}/\${rounds.length}: \${round.title}\`;
+        for (let ri = 0; ri < rounds.length; ri++) {
+          if (stopFlag) break;
+          const round = rounds[ri];
+          const rLabel = 'babak ' + (ri+1) + '/' + rounds.length + ': ' + round.title;
 
-            if (skip) {
-              const tasks = Array.isArray(round.task) ? round.task : [];
-              const perfect = tasks.some(t => t.finish_time && parseFloat(t.score) >= 100);
-              if (perfect) { addLog(\`  ⏭ \${rlabel}\`, 'skip'); continue; }
-            }
-
-            statEl.textContent = \`\${label}\\n\${rlabel}\\nmenyiapkan…\`;
-            try {
-              const examsUrl = \`\${HTML_BASE}/stages/\${stage.id}/rounds/\${round.id}/exams\`;
-              const html = await fetch(examsUrl, { credentials:'same-origin' }).then(r => r.text());
-              const doc = new DOMParser().parseFromString(html, 'text/html');
-              const dm = html.match(/var dataTask\\s*=\\s*(\\{[\\s\\S]*?\\});/);
-              if (!dm) throw new Error('dataTask tidak ada');
-              const dataTask = JSON.parse(dm[1]);
-              const taskId = dataTask.id;
-              const tk2 = doc.querySelector('meta[name="csrf-token"]')?.content || token;
-              const groups = Array.from(doc.querySelectorAll('.question-group'));
-              if (groups.length === 0) { addLog(\`  ⚠ \${rlabel}: 0 soal\`, 'err'); continue; }
-
-              const checkUrl  = \`\${HTML_BASE}/stages/\${stage.id}/rounds/\${round.id}/check\`;
-              const finishUrl = \`\${HTML_BASE}/stages/\${stage.id}/rounds/\${round.id}/\${taskId}/finishes\`;
-
-              let ok = 0, fail = 0;
-              for (let qi = 0; qi < groups.length; qi++) {
-                if (stopFlag) break;
-                const qg = groups[qi];
-                const qid = qg.dataset.id, qtype = qg.dataset.type;
-                statEl.textContent = \`\${label}\\n\${rlabel}\\nsoal \${qi+1}/\${groups.length} — ok=\${ok} fail=\${fail}\`;
-                try {
-                  const pre = await postForm(checkUrl, { id:qid, task_id:taskId, answer:'A', repeatance:'false', type:qtype, _token:tk2 }, tk2);
-                  if (!pre || !pre.answer) { fail++; continue; }
-                  const sub = await postForm(checkUrl, { id:qid, task_id:taskId, answer:pre.answer, repeatance:'false', type:qtype, _token:tk2 }, tk2);
-                  if (sub.status) ok++; else fail++;
-                } catch (_) { fail++; }
-                await sleep(150);
-              }
-
-              try { await postForm(finishUrl, { _token: tk2 }, tk2); } catch (_) {}
-              await sleep(400);
-              let score = null;
-              try {
-                const rj = await getJson(API_BASE + '/stages/' + stage.id + '/rounds');
-                const r2 = (rj.data || []).find(x => x.id === round.id);
-                const t2 = r2 && r2.task && r2.task.find(t => t.id === taskId);
-                if (t2) score = t2.score;
-              } catch (_) {}
-
-              grandOk += ok; grandFail += fail; totalRounds++;
-              if (parseFloat(score) >= 100) totalPerfect++;
-              addLog(\`  ✅ \${rlabel}: ok=\${ok} fail=\${fail} score=\${score ?? '-'}\`, 'ok');
-            } catch (e) {
-              addLog(\`  ❌ \${rlabel}: \${e.message}\`, 'err');
-            }
-            await sleep(300);
+          if (skip) {
+            const tasks = Array.isArray(round.task) ? round.task : [];
+            const perfect = tasks.some(t => t.finish_time && parseFloat(t.score) >= 100);
+            if (perfect) { addLog('  ⏭ ' + rLabel + ' (sudah 100)', 'skip'); continue; }
           }
-        } catch (e) { addLog(\`❌ \${label}: \${e.message}\`, 'err'); }
-        barEl.style.width = \`\${((si+1)/todo.length)*100}%\`;
-        await sleep(600);
+
+          statEl.textContent = sLabel + '\\n' + rLabel + '\\nfetch /exams…';
+          addLog('\\n  ▸ ' + rLabel, 'info');
+
+          try {
+            const examsUrl = htmlBase + '/stages/' + stage.id + '/rounds/' + round.id + '/exams';
+            const r = await fetch(examsUrl, { credentials:'same-origin' });
+            addLog('    HTTP ' + r.status);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            const html = await r.text();
+            const parsed = parseExams(html);
+            addLog('    tipe="' + parsed.kind + '" soal=' + parsed.items.length, 'ok');
+            if (parsed.items.length === 0) { addLog('    ⚠ 0 soal', 'warn'); continue; }
+
+            const tk = parsed.token || token;
+            const checkUrl = parsed.checkUrl || (htmlBase + '/stages/' + stage.id + '/rounds/' + round.id + '/check');
+            const finishUrl = htmlBase + '/stages/' + stage.id + '/rounds/' + round.id + '/' + parsed.taskId + '/finishes';
+
+            const worker = async (item) => {
+              const preFields = { _token: tk, id: item.id, task_id: parsed.taskId, answer: 'zzz', repeatance: 'false' };
+              if (item.needsType && item.type) preFields.type = item.type;
+              const pre = await postForm(checkUrl, preFields, tk);
+              if (!pre || !pre.answer) throw new Error('no-answer');
+              const variants = buildVariants(pre.answer);
+              for (const v of variants) {
+                for (const rep of [false, true]) {
+                  const sf = { _token: tk, id: item.id, task_id: parsed.taskId, answer: v, repeatance: rep ? 'true' : 'false' };
+                  if (item.needsType && item.type) sf.type = item.type;
+                  try {
+                    const sub = await postForm(checkUrl, sf, tk);
+                    if (sub && (sub.status === true || sub.status === 'true')) return { ok: true };
+                  } catch (_) {}
+                }
+              }
+              throw new Error('all-variants-failed');
+            };
+
+            let ok = 0, fail = 0;
+            await runBatch(parsed.items, worker, (done, total, res) => {
+              if (res.ok) ok++; else fail++;
+              statEl.textContent = sLabel + '\\n' + rLabel + '\\nsoal ' + done + '/' + total + ' — ok=' + ok + ' fail=' + fail;
+            });
+
+            addLog('    hasil: ok=' + ok + ' fail=' + fail, fail > 0 ? 'warn' : 'ok');
+
+            try { await postForm(finishUrl, { _token: tk }, tk); } catch (_) {}
+            await sleep(FINISH_GAP);
+
+            let score = null;
+            try {
+              const rj = await getJson(apiBase + '/stages/' + stage.id + '/rounds');
+              const r2 = (rj.data || []).find(x => x.id === round.id);
+              const t2 = r2 && r2.task && r2.task.find(t => t.id === parsed.taskId);
+              if (t2) score = t2.score;
+            } catch (_) {}
+
+            totalRounds++;
+            grandOk += ok; grandFail += fail;
+            if (parseFloat(score) >= 100) totalPerfect++;
+            addLog('    ' + (fail > 0 ? '⚠' : '✅') + ' selesai: ok=' + ok + ' fail=' + fail + ' score=' + (score ?? '-'), fail > 0 ? 'warn' : 'ok');
+          } catch (e) { addLog('    ❌ ' + rLabel + ': ' + e.message, 'err'); }
+          await sleep(ROUND_GAP);
+        }
+        barEl.style.width = ((si+1)/todo.length*100) + '%';
+        await sleep(ROUND_GAP);
       }
 
-      statEl.innerHTML = \`<b>\${stopFlag ? '⏹ Dihentikan' : '✅ Selesai'}</b>\\nRonde: \${todo.length}\\nBabak: \${totalRounds} (perfect: \${totalPerfect})\\nSoal: ok=\${grandOk} fail=\${grandFail}\`;
-      barEl.style.background = stopFlag ? '#f87171' : '#4ade80';
+      const dur = ((Date.now() - t0) / 1000).toFixed(1);
+      statEl.innerHTML = '<b>' + (stopFlag ? '⏹ Dihentikan' : '✅ Selesai') + '</b>\\nRonde (stage): ' + totalStages + '\\nBabak: ' + totalRounds + ' (perfect: ' + totalPerfect + ')\\nSoal: ok=' + grandOk + ' fail=' + grandFail + '\\nDurasi: ' + dur + 's';
+      barEl.style.background = grandFail > 0 ? '#fbbf24' : (stopFlag ? '#f87171' : '#4ade80');
     });
 
-  } catch (e) {
-    initEl.innerHTML = \`<span style="color:#f87171">Error: \${e.message}</span>\`;
+  } catch (fatal) {
+    showError('FATAL', fatal);
   }
 })();`;
-}
+};
