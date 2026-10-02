@@ -284,6 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const config = {
             MODE: els.mode.value,
             MEB_RANGES: ranges,
+            MIN_DURATION_PER_RANGE_MS: 100000,
             OVERWRITE_EXISTING: els.overwrite.checked,
             RELOAD_AFTER_RUN: els.reload.checked,
             WEEKLY_PLAN: plan

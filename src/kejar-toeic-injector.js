@@ -7,10 +7,14 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
   document.getElementById('__kj_style')?.remove();
 
   const PRESET_SLUG = window.__KEJAR_PRESET_SLUG__ || null;
-  const CONCURRENCY = 4;
-  const DELAY_MS = 30;
-  const ROUND_GAP = 200;
-  const FINISH_GAP = 200;
+  const REQUEST_GAP_MS = 450;
+  const ROUND_DURATION_MS = {
+    toeic_reading_preparation: 120000,
+    toeicwords: 180000
+  };
+  const DEFAULT_ROUND_DURATION_MS = 300000;
+  const ROUND_GAP = 500;
+  const FINISH_GAP = 500;
 
   const style = document.createElement('style');
   style.id = '__kj_style';
@@ -117,6 +121,14 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
     const H = { 'X-Requested-With':'XMLHttpRequest', 'X-CSRF-TOKEN':token, 'Accept':'application/json' };
     const Hpost = Object.assign({ 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8' }, H);
     const sleep = ms => new Promise(r => setTimeout(r, ms));
+    let nextRequestAt = 0;
+    const waitForRequestSlot = async () => {
+      const wait = nextRequestAt - Date.now();
+      if (wait > 0) await sleep(wait);
+      nextRequestAt = Date.now() + REQUEST_GAP_MS;
+    };
+    const roundDurationFor = slug => ROUND_DURATION_MS[slug] || DEFAULT_ROUND_DURATION_MS;
+    const formatMinutes = duration => Math.round(duration / 60000) + ' menit';
 
     const getJson = async (url) => {
       const r = await fetch(url, { headers:H, credentials:'same-origin' });
@@ -163,7 +175,7 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
     const updateInfo = () => {
       const a = +fromEl.value, b = +toEl.value;
       if (b < a) { infoEl.textContent = '⚠ Ronde akhir harus ≥ awal'; runBtn.disabled = true; return; }
-      infoEl.textContent = 'Akan memproses ' + (b - a + 1) + ' ronde';
+      infoEl.textContent = 'Akan memproses ' + (b - a + 1) + ' ronde · target ' + formatMinutes(roundDurationFor(gameEl.value)) + ' per babak';
       runBtn.disabled = false;
     };
 
@@ -209,6 +221,7 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
       let lastErr;
       for (let i = 0; i < tries; i++) {
         try {
+          await waitForRequestSlot();
           const r = await fetch(url, { method:'POST', headers, credentials:'same-origin', body:new URLSearchParams(fields) });
           if (r.status === 429) { await sleep(500 * (i + 1)); lastErr = new Error('HTTP 429'); continue; }
           if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -224,22 +237,17 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
       throw lastErr || new Error('post failed');
     };
 
-    const runBatch = async (items, worker, onProgress) => {
+    const runBatch = async (items, worker, onProgress, startedAt, minimumDurationMs, shouldStop) => {
       const results = new Array(items.length);
-      let idx = 0, done = 0;
-      const n = Math.min(CONCURRENCY, items.length);
-      const runners = Array.from({ length: n }, async () => {
-        while (true) {
-          const i = idx++;
-          if (i >= items.length) return;
-          try { results[i] = await worker(items[i], i); }
-          catch (e) { results[i] = { ok: false, error: e.message }; }
-          done++;
-          if (onProgress) onProgress(done, items.length, results[i]);
-          await sleep(DELAY_MS);
-        }
-      });
-      await Promise.all(runners);
+      let done = 0;
+      for (let i = 0; i < items.length && !shouldStop(); i++) {
+        try { results[i] = await worker(items[i], i); }
+        catch (e) { results[i] = { ok: false, error: e.message }; }
+        done++;
+        if (onProgress) onProgress(done, items.length, results[i]);
+        const slotEnd = startedAt + minimumDurationMs * ((i + 1) / items.length);
+        while (!shouldStop() && Date.now() < slotEnd) await sleep(Math.min(250, slotEnd - Date.now()));
+      }
       return results;
     };
 
@@ -357,6 +365,9 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
 
           statEl.textContent = sLabel + '\\n' + rLabel + '\\nfetch /exams…';
           addLog('\\n  ▸ ' + rLabel, 'info');
+          const roundStartedAt = Date.now();
+          const roundDurationMs = roundDurationFor(slug);
+          addLog('    pacing aktif: target ' + formatMinutes(roundDurationMs) + ' per babak', 'info');
 
           try {
             const examsUrl = htmlBase + '/stages/' + stage.id + '/rounds/' + round.id + '/exams';
@@ -395,7 +406,7 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
             await runBatch(parsed.items, worker, (done, total, res) => {
               if (res.ok) ok++; else fail++;
               statEl.textContent = sLabel + '\\n' + rLabel + '\\nsoal ' + done + '/' + total + ' — ok=' + ok + ' fail=' + fail;
-            });
+            }, roundStartedAt, roundDurationMs, () => stopFlag);
 
             addLog('    hasil: ok=' + ok + ' fail=' + fail, fail > 0 ? 'warn' : 'ok');
 

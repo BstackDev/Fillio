@@ -4,6 +4,7 @@
 
   const CONFIG = __CONFIG_PLACEHOLDER__;
   const HEADERS = { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+  const MIN_DURATION_PER_DAY_MS = Math.max(0, Number(CONFIG.MIN_DURATION_PER_DAY_MS ?? 25000));
   const log = (...args) => console.log('[AutoFill API]', ...args);
   const warn = (...args) => console.warn('[AutoFill API]', ...args);
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -303,6 +304,10 @@
     updateProgress(0, rangeDates.length);
     log(`Mulai API range ${formatDate(from)} s/d ${formatDate(to)}`);
     log('Halaman tidak akan dinavigasikan; proses berjalan lewat API.');
+    if (CONFIG.MODE === 'RUN') {
+      const estimatedMinutes = Math.ceil(rangeDates.length * MIN_DURATION_PER_DAY_MS / 60000);
+      log(`Pacing aktif: minimal ${Math.ceil(MIN_DURATION_PER_DAY_MS / 1000)} detik per hari; estimasi ${estimatedMinutes} menit untuk ${rangeDates.length} hari.`);
+    }
 
     let cursor = new Date(from);
     let totalDays = 0;
@@ -317,16 +322,32 @@
       const catalog = await loadCatalog(weekFrom, weekTo, calendarId);
       const plan = buildPlan(CONFIG, dateRange(cursor, targetEnd), catalog);
       for (const day of plan) {
+        const dayStartedAt = performance.now();
         const daily = day.items.filter(item => item.daily);
         const salat = day.items.filter(item => !item.daily);
         const dailyCreates = daily.filter(item => !item.deed_id);
         const dailyUpdates = daily.filter(item => item.deed_id);
         const salatCreates = salat.filter(item => !item.deed_id);
         const salatUpdates = salat.filter(item => item.deed_id);
-        await send(day.date, dailyCreates, true, CONFIG.MODE, false);
-        await send(day.date, dailyUpdates, true, CONFIG.MODE, true);
-        await send(day.date, salatCreates, false, CONFIG.MODE, false);
-        await send(day.date, salatUpdates, false, CONFIG.MODE, true);
+        const actions = [
+          { items: dailyCreates, daily: true, updating: false },
+          { items: dailyUpdates, daily: true, updating: true },
+          { items: salatCreates, daily: false, updating: false },
+          { items: salatUpdates, daily: false, updating: true }
+        ].filter(action => action.items.length);
+        for (const [actionIndex, action] of actions.entries()) {
+          await send(day.date, action.items, action.daily, CONFIG.MODE, action.updating);
+          if (CONFIG.MODE === 'RUN') {
+            const slotEnd = dayStartedAt + MIN_DURATION_PER_DAY_MS * ((actionIndex + 1) / actions.length);
+            const remaining = slotEnd - performance.now();
+            if (remaining > 0) {
+              const seconds = Math.ceil(remaining / 1000);
+              log(`${day.date}: slot ${actionIndex + 1}/${actions.length}, jeda ${seconds} detik.`);
+              if (progressPanel) progressPanel.querySelector('.autofill-progress-status').textContent = `${day.date}: slot ${actionIndex + 1}/${actions.length} (${seconds}s)`;
+              await sleep(remaining);
+            }
+          }
+        }
         totalDays++;
         updateProgress(totalDays, rangeDates.length);
         log(`${day.date} selesai (${totalDays} hari)`);

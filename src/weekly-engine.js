@@ -22,6 +22,7 @@
         OVERWRITE_EXISTING: false,
         RELOAD_AFTER_RUN: true,
         WEEKLY_PLAN: {},
+        MIN_DURATION_PER_RANGE_MS: 100000,
         DELAY_MS: 400,
         SHOW_UI: true
     }, CONFIG || {});
@@ -207,8 +208,19 @@
     // ---------- Proses satu MEB ----------
     async function processOneRange(range, planEntries, counters) {
         const { meb, from, to } = range;
+        const rangeStartedAt = Date.now();
         const label = meb != null ? `MEB ${meb} (${from} → ${to})` : `${from} → ${to}`;
         log(`\n=== ${label} ===`);
+        if (CFG.MODE === 'RUN') log(`Pacing aktif: target minimal ${Math.ceil(CFG.MIN_DURATION_PER_RANGE_MS / 1000)} detik untuk rentang ini.`);
+
+        const waitForHabitSlot = async index => {
+            if (CFG.MODE !== 'RUN') {
+                await sleep(CFG.DELAY_MS);
+                return;
+            }
+            const slotEnd = rangeStartedAt + CFG.MIN_DURATION_PER_RANGE_MS * ((index + 1) / planEntries.length);
+            await sleep(Math.max(CFG.DELAY_MS, slotEnd - Date.now()));
+        };
 
         const url = `/student/journal-weekly/habituation?start_date=${from}&end_date=${to}`
                   + `&subtype=HABIT&calendarId=${encodeURIComponent(counters.calId)}`;
@@ -216,7 +228,7 @@
         const weeklyHabits = new Map(flattenHabits(json).map(h => [h.id, h]));
 
         let habitDone = 0;
-        for (const [habitId, plan] of planEntries) {
+        for (const [planIndex, [habitId, plan]] of planEntries.entries()) {
             try {
                 const habit = weeklyHabits.get(habitId);
                 if (!habit) {
@@ -224,7 +236,7 @@
                     counters.failed++;
                     habitDone++;
                     if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, planEntries.length, label, `Skip (not found): ${habitId.slice(0, 8)}…`);
-                    await sleep(CFG.DELAY_MS);
+                    await waitForHabitSlot(planIndex);
                     continue;
                 }
 
@@ -234,7 +246,7 @@
                     counters.failed++;
                     habitDone++;
                     if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, planEntries.length, label, `Skip (kategori): ${habit.habit}`);
-                    await sleep(CFG.DELAY_MS);
+                    await waitForHabitSlot(planIndex);
                     continue;
                 }
 
@@ -253,7 +265,7 @@
                     counters.failed++;
                     habitDone++;
                     if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, planEntries.length, label, `Skip (tanpa tanggal): ${habit.habit || habitId.slice(0, 8)}`);
-                    await sleep(CFG.DELAY_MS);
+                    await waitForHabitSlot(planIndex);
                     continue;
                 }
 
@@ -263,7 +275,7 @@
                     counters.skipped++;
                     habitDone++;
                     if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, planEntries.length, label, `Skip (sudah ada): ${habit.habit}`);
-                    await sleep(CFG.DELAY_MS);
+                    await waitForHabitSlot(planIndex);
                     continue;
                 }
 
@@ -302,7 +314,7 @@
                 warn(`Gagal ${habitId} @ ${label}: ${err.message}`);
                 if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, planEntries.length, label, `Error: ${err.message.slice(0, 60)}`);
             }
-            await sleep(CFG.DELAY_MS);
+            await waitForHabitSlot(planIndex);
         }
     }
 
@@ -323,6 +335,10 @@
         log(`Calendar: ${calId}`);
         log(`Total MEB: ${ranges.length}`);
         log(`Plan: ${planEntries.length} kegiatan`);
+        if (CFG.MODE === 'RUN') {
+            const estimatedMinutes = Math.ceil(ranges.length * CFG.MIN_DURATION_PER_RANGE_MS / 60000);
+            log(`Pacing aktif: minimal ${Math.ceil(CFG.MIN_DURATION_PER_RANGE_MS / 1000)} detik per rentang; estimasi ${estimatedMinutes} menit total.`);
+        }
 
         if (CFG.SHOW_UI) initProgress(ranges.length, planEntries.length);
 
