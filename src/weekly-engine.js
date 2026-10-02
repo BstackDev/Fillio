@@ -7,6 +7,7 @@
  *   - findExistingDeed: cari deed PER-MINGGU (range.from..range.to)
  *   - findDetail: case-insensitive + trim
  *   - Kategori "Tidak melaksanakan" / "Tidak ada kegiatan" → tanpa witness
+ *   - GENDER: 'A' cowok / 'B' cewek — habit beda gender di-skip tanpa warning
  * ===================================================================== */
 
 (async function () {
@@ -15,6 +16,7 @@
     const CONFIG = __CONFIG_PLACEHOLDER__;
     const CFG = Object.assign({
         MODE: 'RUN',
+        GENDER: 'A',
         MEB_RANGES: null,
         TARGET_RANGE: null,
         WEEK_OFFSET: 0,
@@ -22,7 +24,7 @@
         OVERWRITE_EXISTING: false,
         RELOAD_AFTER_RUN: true,
         WEEKLY_PLAN: {},
-        MIN_DURATION_PER_RANGE_MS: 100000,
+        MIN_DURATION_PER_RANGE_MS: 120000,
         DELAY_MS: 400,
         SHOW_UI: true
     }, CONFIG || {});
@@ -33,6 +35,21 @@
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     const DAY_MAP = { Sn: 0, Sl: 1, Rb: 2, Km: 3, Jm: 4, Sb: 5, Mg: 6 };
     const NO_DETAIL_CATEGORIES = new Set(['tidak melaksanakan', 'tidak ada kegiatan']);
+
+    // Mapping gender per habit
+    const HABIT_GENDER = {
+        'e4c7dfac-2fc8-4e25-af5a-6834df7b69f5': 'A',   // Sholat Jumat
+        'cfdd32de-e59c-4d43-a2ec-db6f290a16f0': 'B',   // Keputrian
+        '73985f09-c695-4c36-aa8e-cdd44212c4db': 'B'    // Tablet Tambah Darah
+    };
+
+    const GENDER = String(CFG.GENDER || 'A').toUpperCase();
+
+    function genderMatches(habitId) {
+        const hg = HABIT_GENDER[habitId];
+        if (!hg) return true;
+        return hg === GENDER;
+    }
 
     const fmt = d =>
         `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -213,12 +230,21 @@
         log(`\n=== ${label} ===`);
         if (CFG.MODE === 'RUN') log(`Pacing aktif: target minimal ${Math.ceil(CFG.MIN_DURATION_PER_RANGE_MS / 1000)} detik untuk rentang ini.`);
 
+        // Filter habit sesuai gender (skip tanpa warning)
+        const filteredEntries = planEntries.filter(([habitId]) => {
+            const ok = genderMatches(habitId);
+            if (!ok) log(`Skip (beda gender): ${habitId.slice(0, 8)}…`);
+            return ok;
+        });
+
+        const totalHabits = filteredEntries.length;
+
         const waitForHabitSlot = async index => {
             if (CFG.MODE !== 'RUN') {
                 await sleep(CFG.DELAY_MS);
                 return;
             }
-            const slotEnd = rangeStartedAt + CFG.MIN_DURATION_PER_RANGE_MS * ((index + 1) / planEntries.length);
+            const slotEnd = rangeStartedAt + CFG.MIN_DURATION_PER_RANGE_MS * ((index + 1) / totalHabits);
             await sleep(Math.max(CFG.DELAY_MS, slotEnd - Date.now()));
         };
 
@@ -228,14 +254,14 @@
         const weeklyHabits = new Map(flattenHabits(json).map(h => [h.id, h]));
 
         let habitDone = 0;
-        for (const [planIndex, [habitId, plan]] of planEntries.entries()) {
+        for (const [planIndex, [habitId, plan]] of filteredEntries.entries()) {
             try {
                 const habit = weeklyHabits.get(habitId);
                 if (!habit) {
                     warn(`Habit tidak ditemukan: ${habitId}`);
                     counters.failed++;
                     habitDone++;
-                    if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, planEntries.length, label, `Skip (not found): ${habitId.slice(0, 8)}…`);
+                    if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, totalHabits, label, `Skip (not found): ${habitId.slice(0, 8)}…`);
                     await waitForHabitSlot(planIndex);
                     continue;
                 }
@@ -245,7 +271,7 @@
                     warn(`Kategori "${plan.category}" tidak ada di "${habit.habit}". Tersedia: ${(habit.details || []).map(d => d.category).join(' | ')}`);
                     counters.failed++;
                     habitDone++;
-                    if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, planEntries.length, label, `Skip (kategori): ${habit.habit}`);
+                    if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, totalHabits, label, `Skip (kategori): ${habit.habit}`);
                     await waitForHabitSlot(planIndex);
                     continue;
                 }
@@ -264,7 +290,7 @@
                 if (!targetDate) {
                     counters.failed++;
                     habitDone++;
-                    if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, planEntries.length, label, `Skip (tanpa tanggal): ${habit.habit || habitId.slice(0, 8)}`);
+                    if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, totalHabits, label, `Skip (tanpa tanggal): ${habit.habit || habitId.slice(0, 8)}`);
                     await waitForHabitSlot(planIndex);
                     continue;
                 }
@@ -274,7 +300,7 @@
                 if (existing && !CFG.OVERWRITE_EXISTING) {
                     counters.skipped++;
                     habitDone++;
-                    if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, planEntries.length, label, `Skip (sudah ada): ${habit.habit}`);
+                    if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, totalHabits, label, `Skip (sudah ada): ${habit.habit}`);
                     await waitForHabitSlot(planIndex);
                     continue;
                 }
@@ -305,14 +331,14 @@
                 if (existing) counters.updated++; else counters.created++;
                 if (CFG.SHOW_UI) {
                     const tag = existing ? 'UPDATE' : (isNoDetail ? 'NO-DETAIL' : 'CREATE');
-                    updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone + 1, planEntries.length, label, `${tag}: ${habit.habit}`);
+                    updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone + 1, totalHabits, label, `${tag}: ${habit.habit}`);
                 }
                 habitDone++;
             } catch (err) {
                 counters.failed++;
                 habitDone++;
                 warn(`Gagal ${habitId} @ ${label}: ${err.message}`);
-                if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, planEntries.length, label, `Error: ${err.message.slice(0, 60)}`);
+                if (CFG.SHOW_UI) updateProgress(counters.weekDone + 1, counters.totalWeeks, habitDone, totalHabits, label, `Error: ${err.message.slice(0, 60)}`);
             }
             await waitForHabitSlot(planIndex);
         }
@@ -332,6 +358,7 @@
         }
 
         log(`Mode: ${CFG.MODE}`);
+        log(`Gender: ${GENDER}`);
         log(`Calendar: ${calId}`);
         log(`Total MEB: ${ranges.length}`);
         log(`Plan: ${planEntries.length} kegiatan`);

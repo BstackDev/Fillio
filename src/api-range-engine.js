@@ -4,7 +4,7 @@
 
   const CONFIG = __CONFIG_PLACEHOLDER__;
   const HEADERS = { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
-  const MIN_DURATION_PER_DAY_MS = Math.max(0, Number(CONFIG.MIN_DURATION_PER_DAY_MS ?? 25000));
+  const MIN_DURATION_PER_DAY_MS = Math.max(0, Number(CONFIG.MIN_DURATION_PER_DAY_MS ?? 15000));
   const log = (...args) => console.log('[AutoFill API]', ...args);
   const warn = (...args) => console.warn('[AutoFill API]', ...args);
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));

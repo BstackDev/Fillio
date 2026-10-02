@@ -8,10 +8,7 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
 
   const PRESET_SLUG = window.__KEJAR_PRESET_SLUG__ || null;
   const REQUEST_GAP_MS = 450;
-  const ROUND_DURATION_MS = {
-    toeic_reading_preparation: 120000,
-    toeicwords: 180000
-  };
+  const TOEIC_GAME_SLUGS = ['toeic_reading_preparation', 'toeicwords'];
   const DEFAULT_ROUND_DURATION_MS = 300000;
   const ROUND_GAP = 500;
   const FINISH_GAP = 500;
@@ -127,8 +124,13 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
       if (wait > 0) await sleep(wait);
       nextRequestAt = Date.now() + REQUEST_GAP_MS;
     };
-    const roundDurationFor = slug => ROUND_DURATION_MS[slug] || DEFAULT_ROUND_DURATION_MS;
-    const formatMinutes = duration => Math.round(duration / 60000) + ' menit';
+    const isToeicGame = slug => TOEIC_GAME_SLUGS.includes(slug);
+    const roundDurationFor = (slug, questionCount = 0) => isToeicGame(slug)
+      ? (questionCount >= 10 ? 20000 : 10000)
+      : DEFAULT_ROUND_DURATION_MS;
+    const formatDuration = duration => duration >= 60000
+      ? Math.round(duration / 60000) + ' menit'
+      : Math.round(duration / 1000) + ' detik';
 
     const getJson = async (url) => {
       const r = await fetch(url, { headers:H, credentials:'same-origin' });
@@ -175,7 +177,10 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
     const updateInfo = () => {
       const a = +fromEl.value, b = +toEl.value;
       if (b < a) { infoEl.textContent = '⚠ Ronde akhir harus ≥ awal'; runBtn.disabled = true; return; }
-      infoEl.textContent = 'Akan memproses ' + (b - a + 1) + ' ronde · target ' + formatMinutes(roundDurationFor(gameEl.value)) + ' per babak';
+      const pacingInfo = isToeicGame(gameEl.value)
+        ? 'target 10 detik (<10 soal) / 20 detik (10+ soal) per ronde'
+        : 'target ' + formatDuration(roundDurationFor(gameEl.value)) + ' per babak';
+      infoEl.textContent = 'Akan memproses ' + (b - a + 1) + ' ronde · ' + pacingInfo;
       runBtn.disabled = false;
     };
 
@@ -191,7 +196,8 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
       const start = curIdx >= 0 ? curIdx : 0;
 
       fromEl.innerHTML = stages.map((s,i) => '<option value="' + i + '"' + (i===start?' selected':'') + '>#' + s.order + ' ' + s.title + '</option>').join('');
-      toEl.innerHTML = stages.map((s,i) => '<option value="' + i + '"' + (i===Math.min(start+1, stages.length-1)?' selected':'') + '>#' + s.order + ' ' + s.title + '</option>').join('');
+      const defaultEnd = Math.min(start + (isToeicGame(slug) ? 0 : 1), stages.length - 1);
+      toEl.innerHTML = stages.map((s,i) => '<option value="' + i + '"' + (i===defaultEnd?' selected':'') + '>#' + s.order + ' ' + s.title + '</option>').join('');
 
       countEl.textContent = 'Terdeteksi ' + stages.length + ' ronde';
       rangeWrap.style.display = 'block';
@@ -334,12 +340,14 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
       addLog('Materi: ' + slug, 'info');
       addLog('Rentang: ' + (a+1) + '–' + (b+1) + ' (' + todo.length + ' ronde)', 'info');
 
-      let totalStages = 0, totalRounds = 0, totalPerfect = 0, grandOk = 0, grandFail = 0;
+      let totalStages = 0, grandOk = 0, grandFail = 0;
       const t0 = Date.now();
 
       for (let si = 0; si < todo.length; si++) {
         if (stopFlag) break;
         const stage = todo[si];
+        const stageStartedAt = Date.now();
+        let stageQuestionCount = 0;
         const sLabel = '[' + (si+1) + '/' + todo.length + '] #' + stage.order + ' ' + stage.title;
         statEl.textContent = sLabel + '\\nmemuat babak…';
         addLog('\\n▶ ' + sLabel, 'ok');
@@ -365,10 +373,6 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
 
           statEl.textContent = sLabel + '\\n' + rLabel + '\\nfetch /exams…';
           addLog('\\n  ▸ ' + rLabel, 'info');
-          const roundStartedAt = Date.now();
-          const roundDurationMs = roundDurationFor(slug);
-          addLog('    pacing aktif: target ' + formatMinutes(roundDurationMs) + ' per babak', 'info');
-
           try {
             const examsUrl = htmlBase + '/stages/' + stage.id + '/rounds/' + round.id + '/exams';
             const r = await fetch(examsUrl, { credentials:'same-origin' });
@@ -376,6 +380,7 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             const html = await r.text();
             const parsed = parseExams(html);
+            stageQuestionCount += parsed.items.length;
             addLog('    tipe="' + parsed.kind + '" soal=' + parsed.items.length, 'ok');
             if (parsed.items.length === 0) { addLog('    ⚠ 0 soal', 'warn'); continue; }
 
@@ -406,7 +411,7 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
             await runBatch(parsed.items, worker, (done, total, res) => {
               if (res.ok) ok++; else fail++;
               statEl.textContent = sLabel + '\\n' + rLabel + '\\nsoal ' + done + '/' + total + ' — ok=' + ok + ' fail=' + fail;
-            }, roundStartedAt, roundDurationMs, () => stopFlag);
+            }, Date.now(), isToeicGame(slug) ? 0 : roundDurationFor(slug), () => stopFlag);
 
             addLog('    hasil: ok=' + ok + ' fail=' + fail, fail > 0 ? 'warn' : 'ok');
 
@@ -421,19 +426,23 @@ window.buildKejarInjector = function buildKejarInjector(presetSlug) {
               if (t2) score = t2.score;
             } catch (_) {}
 
-            totalRounds++;
             grandOk += ok; grandFail += fail;
-            if (parseFloat(score) >= 100) totalPerfect++;
             addLog('    ' + (fail > 0 ? '⚠' : '✅') + ' selesai: ok=' + ok + ' fail=' + fail + ' score=' + (score ?? '-'), fail > 0 ? 'warn' : 'ok');
           } catch (e) { addLog('    ❌ ' + rLabel + ': ' + e.message, 'err'); }
           await sleep(ROUND_GAP);
+        }
+        if (isToeicGame(slug) && stageQuestionCount > 0) {
+          const targetDuration = roundDurationFor(slug, stageQuestionCount);
+          const remaining = stageStartedAt + targetDuration - Date.now();
+          addLog('    pacing ronde: ' + stageQuestionCount + ' soal · target ' + formatDuration(targetDuration), 'info');
+          if (remaining > 0) await sleep(remaining);
         }
         barEl.style.width = ((si+1)/todo.length*100) + '%';
         await sleep(ROUND_GAP);
       }
 
       const dur = ((Date.now() - t0) / 1000).toFixed(1);
-      statEl.innerHTML = '<b>' + (stopFlag ? '⏹ Dihentikan' : '✅ Selesai') + '</b>\\nRonde (stage): ' + totalStages + '\\nBabak: ' + totalRounds + ' (perfect: ' + totalPerfect + ')\\nSoal: ok=' + grandOk + ' fail=' + grandFail + '\\nDurasi: ' + dur + 's';
+      statEl.innerHTML = '<b>' + (stopFlag ? '⏹ Dihentikan' : '✅ Selesai') + '</b>\\nRonde diproses: ' + totalStages + '\\nSoal: ok=' + grandOk + ' fail=' + grandFail + '\\nDurasi: ' + dur + 's';
       barEl.style.background = grandFail > 0 ? '#fbbf24' : (stopFlag ? '#f87171' : '#4ade80');
     });
 

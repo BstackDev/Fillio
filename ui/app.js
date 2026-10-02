@@ -257,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return {
             MODE: 'RUN', OVERWRITE_EXISTING: true, SKIP_SALAT: false, SKIP_HABIT: false,
             TARGET_RANGE: { from: state.startDate, to: state.endDate },
-            MIN_DURATION_PER_DAY_MS: 25000,
+            MIN_DURATION_PER_DAY_MS: 15000,
             DELAY_AFTER_EDIT: 300, DELAY_AFTER_MODAL_OPEN: 300, DELAY_AFTER_RADIO: 150,
             DELAY_AFTER_SAVE: 300, DELAY_BETWEEN_GROUPS: 250, DELAY_BETWEEN_HABITS: 200,
             DELAY_AFTER_MODAL_CLOSE: 300, MODAL_TIMEOUT: 6000, MODAL_CLOSE_TIMEOUT: 3000,

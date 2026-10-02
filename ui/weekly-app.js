@@ -22,10 +22,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ============================================
     // SCHEMA HABIT MINGGUAN
+    //   gender: 'A' = cowok only
+    //           'B' = cewek only
+    //           (tidak diisi) = keduanya
     // ============================================
     const HABITS = [
         // SPIRIT
-        { id: 'e4c7dfac-2fc8-4e25-af5a-6834df7b69f5', name: 'Sholat Jumat', aspect: 'SPIRIT',
+        { id: 'e4c7dfac-2fc8-4e25-af5a-6834df7b69f5', name: 'Sholat Jumat', aspect: 'SPIRIT', gender: 'A',
           categories: ['Melaksanakan', 'Tidak melaksanakan', 'Tidak ada kegiatan'],
           defaultCategory: 'Melaksanakan', defaultDay: 'Jm', defaultWitness: 'Teman', defaultName: 'Tubagus' },
 
@@ -42,6 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
           defaultCategory: 'Melaksanakan', defaultDay: 'Jm', defaultWitness: 'Teman', defaultName: 'Tubagus' },
 
         // BODY
+        { id: '73985f09-c695-4c36-aa8e-cdd44212c4db', name: 'Mengonsumsi Tablet Tambah Darah/Vitamin', aspect: 'BODY', gender: 'B',
+          categories: ['Melaksanakan', 'Tidak melaksanakan', 'Tidak ada kegiatan'],
+          defaultCategory: 'Melaksanakan', defaultDay: 'Jm', defaultWitness: 'Teman', defaultName: 'nesya' },
+
         { id: '33396f2a-97f1-4f13-8b1e-27b8cd66ab6c', name: 'Aktivitas Fisik (min. 15 menit)', aspect: 'BODY',
           categories: ['Melaksanakan', 'Tidak melaksanakan'],
           defaultCategory: 'Melaksanakan', defaultDay: 'Sb', defaultWitness: 'Orang Tua', defaultName: '' },
@@ -79,6 +86,10 @@ document.addEventListener('DOMContentLoaded', () => {
           categories: ['Melaksanakan', 'Tidak melaksanakan'],
           defaultCategory: 'Melaksanakan', defaultDay: 'Sl', defaultWitness: 'Teman', defaultName: 'Tubagus' },
 
+        { id: 'cfdd32de-e59c-4d43-a2ec-db6f290a16f0', name: 'Keputrian', aspect: 'MIND', gender: 'B',
+          categories: ['Melaksanakan', 'Tidak melaksanakan'],
+          defaultCategory: 'Melaksanakan', defaultDay: 'Jm', defaultWitness: 'Teman', defaultName: 'nesya' },
+
         { id: '90c20cba-34bc-47f8-9978-0debd400fdaa', name: 'Mencuci Baju', aspect: 'MIND',
           categories: ['Melaksanakan', 'Tidak melaksanakan'],
           defaultCategory: 'Melaksanakan', defaultDay: 'Sb', defaultWitness: 'Orang Tua', defaultName: '' },
@@ -114,6 +125,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const WITNESSES = ['kosong', 'Guru', 'Teman', 'Orang Tua', 'Lainnya'];
     const WITNESS_MAP = { Guru: 'TEACHER', Teman: 'FRIEND', 'Orang Tua': 'PARENT', Lainnya: 'OTHER' };
 
+    function habitMatchesGender(habit, gender) {
+        if (!habit.gender) return true;
+        return habit.gender === gender;
+    }
+
     // ============================================
     // DOM refs
     // ============================================
@@ -135,6 +151,31 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const [k, el] of Object.entries(els)) {
         if (!el) console.error(`[Weekly-App] Elemen tidak ditemukan: ${k}`);
     }
+
+    // ============================================
+    // Gender selector — auto-inject ke .weekly-controls
+    // ============================================
+    function ensureGenderSelector() {
+        let el = document.getElementById('weekly-gender');
+        if (el) return el;
+
+        const controls = document.querySelector('.weekly-controls');
+        if (!controls) {
+            console.error('[Weekly-App] .weekly-controls tidak ditemukan, gender selector dilewati');
+            return null;
+        }
+
+        const label = document.createElement('label');
+        label.innerHTML = `Gender
+            <select id="weekly-gender">
+                <option value="A">A — Cowok</option>
+                <option value="B">B — Cewek</option>
+            </select>`;
+        controls.insertBefore(label, controls.firstChild);
+        return document.getElementById('weekly-gender');
+    }
+
+    const genderEl = ensureGenderSelector();
 
     // ============================================
     // MEB select — populate
@@ -199,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const nameVal = habit.defaultName || '';
         const nameDisabled = (witSel === 'kosong' || witSel === 'Orang Tua');
 
-        return `<div class="weekly-plan-row" data-habit-id="${habit.id}" data-aspect="${habit.aspect}">
+        return `<div class="weekly-plan-row" data-habit-id="${habit.id}" data-aspect="${habit.aspect}" data-gender="${habit.gender || 'both'}">
             <strong title="${habit.id}">${habit.name}</strong>
             <select data-field="category">
                 ${catOpts.map(v => `<option ${v === catSel ? 'selected' : ''}>${v}</option>`).join('')}
@@ -215,9 +256,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function render() {
+        const gender = genderEl ? genderEl.value : 'A';
+        const visibleHabits = HABITS.filter(h => habitMatchesGender(h, gender));
+
         let lastAspect = null;
         let html = '';
-        for (const habit of HABITS) {
+        for (const habit of visibleHabits) {
             if (habit.aspect !== lastAspect) {
                 html += `<div class="weekly-plan-aspect">${habit.aspect}</div>`;
                 lastAspect = habit.aspect;
@@ -283,15 +327,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const config = {
             MODE: els.mode.value,
+            GENDER: genderEl ? genderEl.value : 'A',
             MEB_RANGES: ranges,
-            MIN_DURATION_PER_RANGE_MS: 100000,
+            MIN_DURATION_PER_RANGE_MS: 120000,
             OVERWRITE_EXISTING: els.overwrite.checked,
             RELOAD_AFTER_RUN: els.reload.checked,
             WEEKLY_PLAN: plan
         };
 
-        // ✅ LOG DI SINI
-        console.log(`[Weekly-App] Mode: ${config.MODE}, Reload: ${config.RELOAD_AFTER_RUN}, MEB: ${ranges.length} minggu`);
+        console.log(`[Weekly-App] Mode: ${config.MODE}, Gender: ${config.GENDER}, Reload: ${config.RELOAD_AFTER_RUN}, MEB: ${ranges.length} minggu`);
 
         try {
             const res = await fetch(`../src/weekly-engine.js?t=${Date.now()}`);
@@ -315,6 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============================================
     function reset() {
         els.mode.value = 'DRY_RUN';
+        if (genderEl) genderEl.value = 'A';
         populateMebSelects();
         els.overwrite.checked = false;
         els.reload.checked = true;
@@ -340,6 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         updateRangeInfo();
     });
+    if (genderEl) genderEl.addEventListener('change', render);
     els.generate.addEventListener('click', generate);
     els.reset.addEventListener('click', reset);
     els.copy.addEventListener('click', () => {
